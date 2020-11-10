@@ -1,0 +1,11 @@
+# files
+.DS_Store
+*.pyc
+.gitconfig
+modi
+
+# dirs
+.vscode/
+dist/
+build/
+
