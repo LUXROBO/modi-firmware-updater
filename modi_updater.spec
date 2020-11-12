@@ -1,6 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 import os
+
 cwd = os.getcwd()
 pyqt_ui = os.path.join(cwd, 'modi', 'assets', 'modi_firmware_updater.ui')
 pyqt_imgs = os.path.join(cwd, 'modi', 'assets', 'image', '*')
@@ -42,18 +43,18 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='modi-updater',
+    name='modi_updater.exe',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False
+    console=False,
 )
 app = BUNDLE(
     exe,
-    name='modi-updater.app',
+    name='modi_updater.app',
     icon=None,
-    bundle_identifier=None
+    bundle_identifier=None,
 )
