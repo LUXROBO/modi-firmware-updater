@@ -17,8 +17,9 @@ GUI MODI Firmware Updater
 
 실행파일 생성 (`exe` 혹은 `app`)
 --
-1. `pyinstaller main.spec` 커맨드를 실행하여 정의한 `spec` 파일을 기반으로 실행파일을 생성
-2. 위의 커맨드가 정상작동 하였다면 `dist` 폴더내의 `main.exe` 혹은 `main.app` 실행파일이 생성된것을 확인
+1. `pyinstaller modi_updater.spec` 커맨드를 실행하여 정의한 `spec` 파일을 기반으로 실행파일을 생성
+2. 위의 커맨드가 정상작동 하였다면 `dist` 폴더내의 `modi_updater.exe` 혹은
+`modi_updater.app` 실행파일이 생성된것을 확인
 
 유용한 커맨드 모음
 --
