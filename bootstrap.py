@@ -20,6 +20,10 @@ def make_clean():
         if os.path.isdir(dirpath):
             shutil.rmtree(dirpath)
 
+    redundant_specfile = os.path.join(cwd, 'main.spec')
+    if os.path.exists(redundant_specfile):
+        shutil.rmtree(redundant_specfile)
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(

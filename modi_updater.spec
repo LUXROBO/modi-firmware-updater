@@ -42,7 +42,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='main',
+    name='modi-updater',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -53,7 +53,7 @@ exe = EXE(
 )
 app = BUNDLE(
     exe,
-    name='main.app',
+    name='modi-updater.app',
     icon=None,
     bundle_identifier=None
 )
