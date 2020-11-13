@@ -31,7 +31,7 @@ GUI MODI Firmware Updater
 
 추천 링크
 --
-1. [프론트엔드로 사용된 PyQt5에 문법에 대한 친절한 설명 문서](https://wikidocs.net/book/2944)
+1. [프론트엔드로 사용된 PyQt5 문법에 대한 문서](https://wikidocs.net/book/2944)
 2. [백엔드로 사용된 PyMODI 공식 페이지](https://github.com/luxrobo/pymodi)
 
 주의 사항
