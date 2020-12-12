@@ -1,3 +1,4 @@
 pyserial
 pyqt5
 pyinstaller
+requests
