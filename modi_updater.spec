@@ -9,12 +9,13 @@ esp32_bins = os.path.join(cwd, 'modi', 'assets', 'firmware', 'esp32', '*')
 stm32_bins = os.path.join(cwd, 'modi', 'assets', 'firmware', 'stm32', '*')
 
 site_package_paths = [path for path in sys.path if path.endswith('site-packages')]
-
+if not site_package_paths:
+    raise ValueError('There is no valid path for site-packages!')
 
 block_cipher = None
 a = Analysis(
     ['main.py'],
-    pathex=[cwd].extend(site_package_paths),
+    pathex=site_package_paths,
     binaries=[],
     # Put data(i.e. assets) under virtual 'modi/'
     datas=[
