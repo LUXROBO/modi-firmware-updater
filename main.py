@@ -2,7 +2,7 @@ import os
 import sys
 import argparse
 
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtCore
 
 from modi.util.gui_firmware_updater import Form
 
