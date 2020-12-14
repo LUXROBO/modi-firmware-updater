@@ -5,7 +5,6 @@ import sys
 
 cwd = os.getcwd()
 pyqt_ui = os.path.join(cwd, 'modi', 'assets', 'modi_firmware_updater.ui')
-pyqt_imgs = os.path.join(cwd, 'modi', 'assets', 'image', '*')
 esp32_bins = os.path.join(cwd, 'modi', 'assets', 'firmware', 'esp32', '*')
 stm32_bins = os.path.join(cwd, 'modi', 'assets', 'firmware', 'stm32', '*')
 
@@ -20,7 +19,6 @@ a = Analysis(
     # Put data(i.e. assets) under virtual 'modi/'
     datas=[
         (pyqt_ui, 'modi'),
-        (pyqt_imgs, 'modi'),
         (esp32_bins, 'modi'),
         (stm32_bins, 'modi'),
     ],
