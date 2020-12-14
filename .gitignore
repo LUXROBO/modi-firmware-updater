@@ -3,6 +3,7 @@
 *.pyc
 .gitconfig
 modi
+*.log
 
 # dirs
 .vscode/
