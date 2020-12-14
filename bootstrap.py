@@ -24,18 +24,24 @@ def make_clean():
     if os.path.exists(redundant_specfile):
         os.remove(redundant_specfile)
 
+def make_executable():
+    make_clean()
+    os.system('pyinstaller modi_updater.spec')
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--mode', type=str, default='setup',
-        choices=['setup', 'clean'],
+        choices=['setup', 'clean', 'install'],
         help='Script which makes your life a lot easier XD'
     )
     args = parser.parse_args()
     mode = args.mode
     mode_func = {
         'setup': symlink_modi_from_pymodi,
-        'clean': make_clean
+        'clean': make_clean,
+        'install': make_executable,
     }.get(mode)
     mode_func()
 
