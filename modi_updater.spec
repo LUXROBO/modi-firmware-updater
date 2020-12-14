@@ -1,6 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 import os
+import sys
 
 cwd = os.getcwd()
 pyqt_ui = os.path.join(cwd, 'modi', 'assets', 'modi_firmware_updater.ui')
@@ -8,12 +9,13 @@ pyqt_imgs = os.path.join(cwd, 'modi', 'assets', 'image', '*')
 esp32_bins = os.path.join(cwd, 'modi', 'assets', 'firmware', 'esp32', '*')
 stm32_bins = os.path.join(cwd, 'modi', 'assets', 'firmware', 'stm32', '*')
 
+site_package_paths = [path for path in sys.path if path.endswith('site-packages')]
+
+
 block_cipher = None
-
-
 a = Analysis(
     ['main.py'],
-    pathex=[cwd],
+    pathex=[cwd].extend(site_package_paths),
     binaries=[],
     # Put data(i.e. assets) under virtual 'modi/'
     datas=[
@@ -44,7 +46,6 @@ exe = EXE(
     a.datas,
     [],
     name='modi_updater',
-    #name='modi_updater.exe',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
