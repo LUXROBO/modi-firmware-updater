@@ -52,10 +52,11 @@ exe = EXE(
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,
+    icon='network_module.ico',
 )
 app = BUNDLE(
     exe,
     name='modi_updater.app',
-    icon=None,
+    icon='network_module.ico',
     bundle_identifier=None,
 )
