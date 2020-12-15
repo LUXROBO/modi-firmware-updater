@@ -24,6 +24,11 @@ def make_clean():
     if os.path.exists(redundant_specfile):
         os.remove(redundant_specfile)
 
+    redundant_logfile = os.path.join(cwd, 'gmfu.log')
+    if os.path.exists(redundant_specfile):
+        os.remove(redundant_specfile)
+
+
 def make_executable():
     make_clean()
     os.system('pyinstaller modi_updater.spec')
