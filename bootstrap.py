@@ -45,7 +45,7 @@ def make_executable_win():
     os.system('pyinstaller modi_updater.spec')
 
 def make_executable_mac():
-    pass
+    raise NotImplementedError
 
 
 if __name__ == '__main__':
