@@ -5,7 +5,7 @@ GUI MODI Firmware Updater
 실행 준비
 --
 1. `python3`(파이썬3.6 혹은 그 이상의 버전)를 컴퓨터에 설치
-2. `git clone https://github.com/jha929/modi-firmware-updater.git` 커맨드를 실행하여 이 `repository`를 클론
+2. `git clone https://github.com/LUXROBO/modi-firmware-updater.git` 커맨드를 실행하여 이 `repository`를 클론
 3. `git submodule update --init --recursive` 커맨드를 이용하여 `submodule`화 된
 `backend (pymodi)` 폴더를 초기화
 4. `python3 -m pip install -r requirements.txt`로 의존성 패키지들을 설치
