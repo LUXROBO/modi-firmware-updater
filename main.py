@@ -1,8 +1,7 @@
-import os
 import sys
 import argparse
 
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import QtWidgets
 
 from modi.util.gui_firmware_updater import Form
 
@@ -22,4 +21,3 @@ if __name__ == "__main__":
     w = Form(installer=installer)
     sys.exit(app.exec())
     print("Terminating MODI Firmware Updater")
-
