@@ -1,4 +1,4 @@
-GUI MODI Firmware Updater
+# MODI Firmware Updater
 -------------------------
 `PyQt5` 프론트엔드와 `PyMODI` 백엔드를 연동하여 `GUI MODI Firmware Updater`를 구현
 
