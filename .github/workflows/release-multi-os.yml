@@ -62,6 +62,7 @@ jobs:
       - name: Run pyinstaller
         run: |
           python bootstrap.py --mode install
+          ls -l dist/
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
