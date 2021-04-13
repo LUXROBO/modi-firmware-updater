@@ -62,13 +62,12 @@ jobs:
       - name: Run pyinstaller
         run: |
           python bootstrap.py --mode install
-          ls -l dist/
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: dist/modi_updater.app
-          asset_name: modi_updater.app
+          file: dist/modi_updater
+          asset_name: modi_updater
           tag: ${{ github.ref }}
           overwrite: true
 
