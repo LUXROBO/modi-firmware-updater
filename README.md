@@ -23,6 +23,11 @@
 1. 깃헙 내에 새로운 릴리즈 생성, 생성시 제목과 내용은 `v*` (e.g. v1.0.0) 의 형식으로 작성
 2. 해당 릴리즈 페이지에 첨부파일로 Windows 와 macOS용 실행파일이 자동으로 첨부된것을 확인
 
+실행파일 다운로드 (사용자용)
+--
+1. [릴리즈 페이지](https://github.com/LUXROBO/modi-firmware-updater/releases)에서 최신 릴리즈의 첨부파일 확인
+2. 운영체제에 따라 `modi_updater.exe` 혹은 `modi_updater.app` 실행파일을 다운로드 후 실행
+
 추천 링크
 --
 1. [프론트엔드로 사용된 PyQt5 문법에 대한 문서](https://wikidocs.net/book/2944)
