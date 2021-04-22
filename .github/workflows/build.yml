@@ -28,7 +28,6 @@ jobs:
     - name: Run type check
       run: |
         python -m mypy modi_firmware_updater 
-  build:
     name: macOS Test
     runs-on: macos-latest
     strategy:
@@ -53,7 +52,6 @@ jobs:
     - name: Run type check
       run: |
         python -m mypy modi_firmware_updater 
-  build:
     name: Windows Test
     runs-on: windows-latest
     strategy:
