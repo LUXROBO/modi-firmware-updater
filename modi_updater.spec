@@ -7,11 +7,11 @@ from platform import system
 
 cwd = os.getcwd()
 
-pyqt_ui = os.path.join(cwd, 'modi', 'assets', 'modi_firmware_updater.ui')
-esp32_bins = os.path.join(cwd, 'modi', 'assets', 'firmware', 'esp32', '*')
-stm32_bins = os.path.join(cwd, 'modi', 'assets', 'firmware', 'stm32', '*')
-luxrobo_font = os.path.join(cwd, 'modi', 'assets', 'font', '*')
-component_imgs = os.path.join(cwd, 'modi', 'assets', 'image', 'component', '*')
+pyqt_ui = os.path.join(cwd, 'modi_firmware_updater', 'assets', 'modi_firmware_updater.ui')
+esp32_bins = os.path.join(cwd, 'modi_firmware_updater', 'assets', 'firmware', 'esp32', '*')
+stm32_bins = os.path.join(cwd, 'modi_firmware_updater', 'assets', 'firmware', 'stm32', '*')
+luxrobo_font = os.path.join(cwd, 'modi_firmware_updater', 'assets', 'font', '*')
+component_imgs = os.path.join(cwd, 'modi_firmware_updater', 'assets', 'component', '*')
 
 site_package_paths = [path for path in sys.path if path.endswith('site-packages')]
 if not site_package_paths:
@@ -22,16 +22,16 @@ a = Analysis(
     ['main.py'],
     pathex=site_package_paths,
     binaries=[],
-    # Put data(i.e. assets) under virtual 'modi/'
+    # Put data(i.e. assets) under virtual 'modi_firmware_updater/'
     datas=[
-        (pyqt_ui, 'modi'),
-        (esp32_bins, 'modi'),
-        (stm32_bins, 'modi'),
-        (luxrobo_font, 'modi'),
-        (component_imgs, 'modi'),
+        (pyqt_ui, 'modi_firmware_updater'),
+        (esp32_bins, 'modi_firmware_updater'),
+        (stm32_bins, 'modi_firmware_updater'),
+        (luxrobo_font, 'modi_firmware_updater'),
+        (component_imgs, 'modi_firmware_updater'),
     ],
     hiddenimports=[
-        "modi.task.ser_task",
+        "modi_firmware_updater.util.serial_manager",
     ],
     hookspath=[],
     runtime_hooks=[],

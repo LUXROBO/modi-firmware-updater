@@ -3,7 +3,7 @@ import argparse
 
 from PyQt5 import QtWidgets
 
-from modi.util.gui_firmware_updater import Form
+from modi_firmware_updater.gui_firmware_updater import Form
 
 
 if __name__ == "__main__":
