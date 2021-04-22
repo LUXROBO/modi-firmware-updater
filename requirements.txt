@@ -2,3 +2,4 @@ pyserial
 pyqt5
 pyinstaller
 pytest
+mypy
