@@ -1,4 +1,0 @@
-[submodule "backend"]
-path = backend
-url = https://github.com/LUXROBO/pymodi.git
-branch = develop
