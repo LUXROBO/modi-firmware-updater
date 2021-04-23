@@ -31,7 +31,7 @@
   <property name="font">
    <font>
     <family>LuxHanSans</family>
-    <pointsize>18</pointsize>
+    <pointsize>15</pointsize>
    </font>
   </property>
   <property name="focusPolicy">
@@ -251,7 +251,7 @@
        <property name="font">
         <font>
          <family>LuxHanSans</family>
-         <pointsize>18</pointsize>
+         <pointsize>15</pointsize>
          <kerning>false</kerning>
         </font>
        </property>
@@ -314,7 +314,7 @@
        <property name="font">
         <font>
          <family>LuxHanSans</family>
-         <pointsize>18</pointsize>
+         <pointsize>15</pointsize>
          <weight>50</weight>
          <bold>false</bold>
          <kerning>false</kerning>
@@ -376,7 +376,7 @@
        <property name="font">
         <font>
          <family>LuxHanSans</family>
-         <pointsize>18</pointsize>
+         <pointsize>15</pointsize>
          <weight>50</weight>
          <bold>false</bold>
          <kerning>false</kerning>
