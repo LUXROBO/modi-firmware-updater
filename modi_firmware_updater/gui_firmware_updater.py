@@ -57,14 +57,14 @@ class Form(QDialog):
         self.logger = self.__init_logger()
         QDialog.__init__(self)
         if installer:
-            ui_path = os.path.dirname(__file__).replace(
-                'util', 'modi_firmware_updater.ui'
+            ui_path = os.path.join(
+                os.path.dirname(__file__), 'updater.ui'
             )
             if sys.platform.startswith('win'):
                 self.component_path = (
                     pathlib.PurePosixPath(
                         pathlib.PurePath(__file__),
-                        '..', '..'
+                        '..'
                     )
                 )
             else:
@@ -77,7 +77,7 @@ class Form(QDialog):
             ui_path = (
                 os.path.join(
                     os.path.dirname(__file__),
-                    'assets', 'modi_firmware_updater.ui'
+                    'assets', 'updater.ui'
                 )
             )
             if sys.platform.startswith('win'):

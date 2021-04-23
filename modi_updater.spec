@@ -7,7 +7,7 @@ from platform import system
 
 cwd = os.getcwd()
 
-pyqt_ui = os.path.join(cwd, 'modi_firmware_updater', 'assets', 'modi_firmware_updater.ui')
+pyqt_ui = os.path.join(cwd, 'modi_firmware_updater', 'assets', 'updater.ui')
 esp32_bins = os.path.join(cwd, 'modi_firmware_updater', 'assets', 'firmware', 'esp32', '*')
 stm32_bins = os.path.join(cwd, 'modi_firmware_updater', 'assets', 'firmware', 'stm32', '*')
 luxrobo_font = os.path.join(cwd, 'modi_firmware_updater', 'assets', 'font', '*')
@@ -31,7 +31,7 @@ a = Analysis(
         (component_imgs, 'modi_firmware_updater'),
     ],
     hiddenimports=[
-        "modi_firmware_updater.util.serial_manager",
+        "modi_firmware_updater.util.connection_util",
     ],
     hookspath=[],
     runtime_hooks=[],

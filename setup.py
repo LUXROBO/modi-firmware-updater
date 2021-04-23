@@ -22,7 +22,7 @@ setup(
     version='0.1.0',
     author='LUXROBO',
     author_email='tech@luxrobo.com',
-    description= 'A GUI Form of MODI Firmware Updater utilizing PyMODI as its backend.',
+    description='A GUI Form of MODI Firmware Updater utilizing PyMODI as its backend.',
     long_description=get_readme(),
     long_description_content_type='text/markdown',
     license='MIT',
