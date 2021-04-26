@@ -5,6 +5,7 @@ import time
 import json
 import serial
 import zipfile
+import pathlib
 
 import threading as th
 import urllib.request as ur
@@ -277,10 +278,18 @@ class ESP32FirmwareUpdater(serial.Serial):
         for i, bin_path in enumerate(self.file_path):
             if self.ui:
                 if i == 2:
-                    root_path = path.join(
-                        path.dirname(__file__),
-                        '..', 'assets', 'firmware', 'esp32'
-                    )
+                    if sys.platform.startswith('win'):
+                        root_path = (
+                            pathlib.PurePosixPath(
+                                pathlib.PurePath(__file__),
+                                '..', '..', 'assets', 'firmware', 'esp32'
+                            )
+                        )
+                    else:
+                        root_path = path.join(
+                            path.dirname(__file__),
+                            '..', 'assets', 'firmware', 'esp32'
+                        )
                 elif i == 3:
                     root_path = (
                         'https://download.luxrobo.com/modi-ota-firmware/'
@@ -305,10 +314,15 @@ class ESP32FirmwareUpdater(serial.Serial):
                     )
                     bin_data = zip_content.read(bin_path)
                 elif i == 2:
-                    firmware_path = path.join(root_path, bin_path)
-                    if self.ui and self.ui.installation:
+                    if sys.platform.startswith('win'):
+                        firmware_path = pathlib.PurePosixPath(
+                            root_path, bin_path
+                        )
+                    else:
+                        firmware_path = path.join(root_path, bin_path)
+                    if self.ui.installation:
                         firmware_path = path.dirname(__file__).replace(
-                            'util', bin_path
+                            'core', bin_path
                         )
                     with open(firmware_path, 'rb') as bin_file:
                         bin_data = bin_file.read()
