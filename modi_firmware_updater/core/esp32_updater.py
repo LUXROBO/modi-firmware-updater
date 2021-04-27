@@ -444,11 +444,13 @@ class ESP32FirmwareUpdater(serial.Serial):
             if self.ui:
                 if self.ui.is_english:
                     self.ui.update_network_esp32.setText(
-                        f"Network ESP32 update is in progress. ({int((curr_seq+seq)/total_seq*100)}%)"
+                        f"Network ESP32 update is in progress. "
+                        f"({int((curr_seq+seq)/total_seq*100)}%)"
                     )
                 else:
                     self.ui.update_network_esp32.setText(
-                        f"네트워크 모듈 업데이트가 진행중입니다. ({int((curr_seq+seq)/total_seq*100)}%)"
+                        f"네트워크 모듈 업데이트가 진행중입니다. "
+                        f"({int((curr_seq+seq)/total_seq*100)}%)"
                     )
             print(
                 f'\r{self.__progress_bar(curr_seq + seq, total_seq)}', end=''
@@ -461,7 +463,7 @@ class ESP32FirmwareUpdater(serial.Serial):
 
     @staticmethod
     def __progress_bar(current: int, total: int) -> str:
-        curr_bar = 70 * current // total
-        rest_bar = 70 - curr_bar
+        curr_bar = 50 * current // total
+        rest_bar = 50 - curr_bar
         return f"Firmware Upload: [{'=' * curr_bar}>{'.' * rest_bar}] " \
                f"{100 * current / total:3.2f}%"
