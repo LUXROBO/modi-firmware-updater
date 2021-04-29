@@ -235,7 +235,7 @@ class ESP32FirmwareUpdater(serial.Serial):
         json_msg = self.__read_json()
         while not json_msg:
             json_msg = self.__read_json()
-            time.sleep(0.01)
+            time.sleep(0.1)
         return json_msg
 
     def __get_esp_id(self):
