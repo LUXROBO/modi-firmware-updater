@@ -133,11 +133,12 @@ class Form(QDialog):
             f'border-image: url({self.active_path}); font-size: 16px'
         )
         self.ui.translate_button.setStyleSheet(
-            f'border-image: url({self.language_frame_path}); font-size: 10px'
+            f'border-image: url({self.language_frame_path}); font-size: 13px'
         )
         self.ui.devmode_button.setStyleSheet(
-            f'border-image: url({self.language_frame_path}); font-size: 10px'
+            f'border-image: url({self.language_frame_path}); font-size: 13px'
         )
+        self.ui.console.setStyleSheet('font-size: 10px')
 
         self.ui.setWindowTitle('MODI Firmware Updater')
 
@@ -201,7 +202,7 @@ class Form(QDialog):
         if self.firmware_updater and self.firmware_updater.update_in_progress:
             return
         self.ui.update_network_esp32.setStyleSheet(
-            f'border-image: url({self.pressed_path})'
+            f'border-image: url({self.pressed_path}); font-size: 16px'
         )
         self.ui.console.clear()
         print(
@@ -220,7 +221,7 @@ class Form(QDialog):
         if self.firmware_updater and self.firmware_updater.update_in_progress:
             return
         self.ui.update_stm32_modules.setStyleSheet(
-            f'border-image: url({self.pressed_path})'
+            f'border-image: url({self.pressed_path}); font-size: 16px'
         )
         self.ui.console.clear()
         print(
@@ -241,7 +242,7 @@ class Form(QDialog):
         if self.firmware_updater and self.firmware_updater.update_in_progress:
             return
         self.ui.update_network_stm32.setStyleSheet(
-            f'border-image: url({self.pressed_path})'
+            f'border-image: url({self.pressed_path}); font-size: 16px'
         )
         self.ui.console.clear()
         print(
@@ -262,7 +263,8 @@ class Form(QDialog):
     def dev_mode_button(self):
         button_start = time.time()
         self.ui.devmode_button.setStyleSheet(
-            f'border-image: url({self.language_frame_pressed_path})'
+            f'border-image: url({self.language_frame_pressed_path});'
+            'font-size: 13px'
         )
         th.Thread(
             target=self.__click_motion, args=(3,button_start), daemon=True
@@ -278,7 +280,8 @@ class Form(QDialog):
     def translate_button_text(self):
         button_start = time.time()
         self.ui.translate_button.setStyleSheet(
-            f'border-image: url({self.language_frame_pressed_path})'
+            f'border-image: url({self.language_frame_pressed_path});'
+            'font-size: 13px'
         )
         th.Thread(
             target=self.__click_motion, args=(4,button_start), daemon=True
@@ -329,16 +332,18 @@ class Form(QDialog):
 
         if button_type in [3, 4]:
             self.buttons[button_type].setStyleSheet(
-                f'border-image: url({self.language_frame_path})'
+                f'border-image: url({self.language_frame_path}); font-size: 13px'
             )
         else:
             self.buttons[button_type].setStyleSheet(
-                f'border-image: url({self.active_path})'
+                f'border-image: url({self.active_path}); font-size: 16px'
             )
             for i, q_button in enumerate(self.buttons):
                 if i in [button_type, 3, 4]:
                     continue
-                q_button.setStyleSheet(f'border-image: url({self.inactive_path})')
+                q_button.setStyleSheet(
+                    f'border-image: url({self.inactive_path}); font-size: 16px'
+                )
                 q_button.setEnabled(False)
 
     def __append_text_line(self, line):

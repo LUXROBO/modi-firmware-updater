@@ -443,7 +443,8 @@ class STM32FirmwareUpdater:
             if self.ui:
                 if self.update_network_base:
                     self.ui.update_stm32_modules.setStyleSheet(
-                        f'border-image: url({self.ui.active_path})'
+                        f'border-image: url({self.ui.active_path});'
+                        'font-size: 16px'
                     )
                     self.ui.update_stm32_modules.setEnabled(True)
                     if self.ui.is_english:
@@ -456,7 +457,8 @@ class STM32FirmwareUpdater:
                         )
                 else:
                     self.ui.update_network_stm32.setStyleSheet(
-                        f'border-image: url({self.ui.active_path})'
+                        f'border-image: url({self.ui.active_path});'
+                        'font-size: 16px'
                     )
                     self.ui.update_network_stm32.setEnabled(True)
                     if self.ui.is_english:
@@ -468,7 +470,7 @@ class STM32FirmwareUpdater:
                             "모듈 초기화"
                         )
                 self.ui.update_network_esp32.setStyleSheet(
-                    f'border-image: url({self.ui.active_path})'
+                    f'border-image: url({self.ui.active_path}); font-size: 16px'
                 )
                 self.ui.update_network_esp32.setEnabled(True)
 

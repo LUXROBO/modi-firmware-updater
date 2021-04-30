@@ -118,11 +118,11 @@ class ESP32FirmwareUpdater(serial.Serial):
 
         if self.ui:
             self.ui.update_stm32_modules.setStyleSheet(
-                f'border-image: url({self.ui.active_path})'
+                f'border-image: url({self.ui.active_path}); font-size: 16px'
             )
             self.ui.update_stm32_modules.setEnabled(True)
             self.ui.update_network_stm32.setStyleSheet(
-                f'border-image: url({self.ui.active_path})'
+                f'border-image: url({self.ui.active_path}); font-size: 16px'
             )
             self.ui.update_network_stm32.setEnabled(True)
             if self.ui.is_english:
