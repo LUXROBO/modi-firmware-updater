@@ -7,26 +7,14 @@ import serial
 import zipfile
 import pathlib
 
-import threading as th
 import urllib.request as ur
 
 from os import path
 from io import open
 from base64 import b64encode, b64decode
-from importlib import import_module as im
 from urllib.error import URLError
 
-from modi_firmware_updater.util.connection_util import SerTask
-from modi_firmware_updater.util.module_util import Module
-from modi_firmware_updater.util.message_util import (
-    unpack_data, decode_message, parse_message
-)
-from modi_firmware_updater.util.connection_util import (
-    list_modi_ports, is_on_pi
-)
-from modi_firmware_updater.util.module_util import (
-    get_module_type_from_uuid
-)
+from modi_firmware_updater.util.connection_util import list_modi_ports
 
 
 def retry(exception_to_catch):
@@ -78,6 +66,7 @@ class ESP32FirmwareUpdater(serial.Serial):
         self.ui = ui
 
     def update_firmware(self, force=False):
+        # is_up_to_date = False
         self.update_in_progress = True
         self.__boot_to_app()
         self.__version_to_update = self.__get_latest_version()
@@ -90,6 +79,20 @@ class ESP32FirmwareUpdater(serial.Serial):
                     f" Do you still want to proceed? [y/n]: ")
                 if 'y' not in response:
                     return
+            # elif self.ui:
+            #     is_up_to_date = True
+            #     print(f"ESP32 is already up to date (v{self.version}).")
+            #     if self.ui.is_english:
+            #         self.ui.update_network_esp32.setText(
+            #             "Network ESP32 is already up to date."
+            #         )
+            #     else:
+            #         self.ui.update_network_esp32.setText(
+            #             "네트워크 모듈이 최신 버전입니다."
+            #         )
+            #     time.sleep(2)
+
+        # if not is_up_to_date:
         print(f"Updating v{self.version} to v{self.__version_to_update}")
         firmware_buffer = self.__compose_binary_firmware()
 
@@ -106,9 +109,9 @@ class ESP32FirmwareUpdater(serial.Serial):
         time.sleep(1)
         self.__set_esp_version(self.__version_to_update)
         print("ESP firmware update is complete!!")
-        self.update_in_progress = False
 
         time.sleep(1)
+        self.update_in_progress = False
         self.flushInput()
         self.flushOutput()
         self.close()
