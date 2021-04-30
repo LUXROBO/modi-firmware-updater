@@ -124,19 +124,19 @@ class Form(QDialog):
         )
 
         self.ui.update_network_esp32.setStyleSheet(
-            f'border-image: url({self.active_path})'
+            f'border-image: url({self.active_path}); font-size: 16px'
         )
         self.ui.update_stm32_modules.setStyleSheet(
-            f'border-image: url({self.active_path})'
+            f'border-image: url({self.active_path}); font-size: 16px'
         )
         self.ui.update_network_stm32.setStyleSheet(
-            f'border-image: url({self.active_path})'
+            f'border-image: url({self.active_path}); font-size: 16px'
         )
         self.ui.translate_button.setStyleSheet(
-            f'border-image: url({self.language_frame_path})'
+            f'border-image: url({self.language_frame_path}); font-size: 10px'
         )
         self.ui.devmode_button.setStyleSheet(
-            f'border-image: url({self.language_frame_path})'
+            f'border-image: url({self.language_frame_path}); font-size: 10px'
         )
 
         self.ui.setWindowTitle('MODI Firmware Updater')
