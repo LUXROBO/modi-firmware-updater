@@ -11,20 +11,15 @@ import urllib.request as ur
 
 from os import path
 from io import open
-from base64 import b64encode, b64decode
-from importlib import import_module as im
+from base64 import b64encode
 from urllib.error import URLError
 
-from modi_firmware_updater.util.connection_util import SerTask
-from modi_firmware_updater.util.module_util import Module
+from modi_firmware_updater.util.connection_util import SerTask, list_modi_ports
 from modi_firmware_updater.util.message_util import (
     unpack_data, decode_message, parse_message
 )
-from modi_firmware_updater.util.connection_util import (
-    list_modi_ports, is_on_pi
-)
 from modi_firmware_updater.util.module_util import (
-    get_module_type_from_uuid
+    Module, get_module_type_from_uuid
 )
 
 
@@ -88,7 +83,7 @@ class STM32FirmwareUpdater:
             reinit_mode = 1
             self.update_network_base = True
             # Retrieve the network id only and update it accordingly
-            timeout, delay = 3, 0.1
+            timeout, delay = 3, 0.2
             while not self.network_id:
                 if timeout <= 0:
                     if not self.update_in_progress:
