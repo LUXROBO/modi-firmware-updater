@@ -31,7 +31,6 @@
   <property name="font">
    <font>
     <family>LuxHanSans</family>
-    <pointsize>15</pointsize>
    </font>
   </property>
   <property name="focusPolicy">
@@ -231,12 +230,12 @@
      </item>
      <item>
       <widget class="QPushButton" name="update_network_esp32">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
+        <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+          </sizepolicy>
+        </property>
        <property name="minimumSize">
         <size>
          <width>620</width>
@@ -252,7 +251,6 @@
        <property name="font">
         <font>
          <family>LuxHanSans</family>
-         <pointsize>15</pointsize>
          <kerning>true</kerning>
         </font>
        </property>
@@ -315,7 +313,6 @@
        <property name="font">
         <font>
          <family>LuxHanSans</family>
-         <pointsize>15</pointsize>
          <kerning>true</kerning>
         </font>
        </property>
@@ -375,7 +372,6 @@
        <property name="font">
         <font>
          <family>LuxHanSans</family>
-         <pointsize>15</pointsize>
          <kerning>true</kerning>
         </font>
        </property>
@@ -446,11 +442,6 @@
        <width>550</width>
        <height>0</height>
       </size>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
      </property>
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>

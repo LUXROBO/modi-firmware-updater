@@ -12,21 +12,30 @@ import urllib.request as ur
 
 from os import path
 from io import open
-from base64 import b64encode, b64decode
+from base64 import b64encode
 from importlib import import_module as im
 from urllib.error import URLError
 
-from modi_firmware_updater.util.connection_util import SerTask
-from modi_firmware_updater.util.module_util import Module
+from modi_firmware_updater.util.connection_util import SerTask, is_on_pi
 from modi_firmware_updater.util.message_util import (
     unpack_data, decode_message, parse_message
 )
-from modi_firmware_updater.util.connection_util import (
-    list_modi_ports, is_on_pi
-)
 from modi_firmware_updater.util.module_util import (
-    get_module_type_from_uuid
+    Module, get_module_type_from_uuid
 )
+
+
+def retry(exception_to_catch):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except exception_to_catch:
+                return wrapper(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 
 class GD32FirmwareUpdater:

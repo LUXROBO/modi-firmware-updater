@@ -3,8 +3,7 @@ import time
 import serial
 import serial.tools.list_ports as stl
 
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from serial.serialutil import SerialException
 from serial.tools.list_ports_common import ListPortInfo
 from typing import List, Optional
