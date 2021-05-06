@@ -323,14 +323,19 @@ class STM32FirmwareUpdater:
                                 f"({progress}%)"
                             )
                     else:
+                        num_to_update = len(self.modules_to_update)
+                        num_updated = len(self.modules_updated)
                         if self.ui.is_english:
                             self.ui.update_stm32_modules.setText(
                                 f"STM32 modules update is in progress. "
-                                f"({progress}%)"
+                                f"({num_updated} / {num_to_update+num_updated})"
+                                f" ({progress}%)"
                             )
                         else:
                             self.ui.update_stm32_modules.setText(
-                                f"모듈 초기화가 진행중입니다. ({progress}%)"
+                                f"모듈 초기화가 진행중입니다. "
+                                f"({num_updated} / {num_to_update+num_updated})"
+                                f" ({progress}%)"
                             )
 
                 print(
