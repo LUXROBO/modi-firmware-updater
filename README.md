@@ -2,7 +2,7 @@
 [![Python Versions](https://badgen.net/badge/python/3/9cf)](https://pypi.python.org/pypi/modi-firmware-updater)
 [![PyPI Release (latest by date)](https://img.shields.io/github/v/release/LUXROBO/modi-firmware-updater?style=flat&color=F3E2A9)](https://pypi.python.org/pypi/modi-firmware-updater)
 [![GitHub LICENSE](https://img.shields.io/github/license/LUXROBO/modi-firmware-updater?style=flat&color=pink)](https://github.com/LUXROBO/modi-firmware-updater/blob/master/LICENSE)
-[![Lines of Code](https://img.shields.io/tokei/lines/github/LUXROBO/modi-firmware-updater?style=flat&color=yellowgreen)](https://github.com/LUXROBO/modi-firmware-updater/tree/master/backend/modi/util/gui_firmware_updater.py)
+[![Lines of Code](https://img.shields.io/tokei/lines/github/LUXROBO/modi-firmware-updater?style=flat&color=yellowgreen)](https://github.com/LUXROBO/modi-firmware-updater/tree/master/modi_firmware_updater)
 
 프로젝트 설명
 --
