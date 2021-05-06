@@ -238,7 +238,7 @@ class ESP32FirmwareUpdater(serial.Serial):
         json_msg = self.__read_json()
         while not json_msg:
             json_msg = self.__read_json()
-            time.sleep(0.01)
+            time.sleep(0.1)
         return json_msg
 
     def __get_esp_id(self):
@@ -250,11 +250,15 @@ class ESP32FirmwareUpdater(serial.Serial):
     def __get_esp_version(self):
         get_version_pkt = b'{"c":160,"s":25,"d":4095,"b":"AAAAAAAAAA==","l":8}'
         self.write(get_version_pkt)
-        json_msg = json.loads(self.__wait_for_json())
+        j = self.__wait_for_json()
+        print(j)
+        json_msg = json.loads(j)
         init_time = time.time()
         while json_msg['c'] != 0xA1:
             self.write(get_version_pkt)
-            json_msg = json.loads(self.__wait_for_json())
+            j = self.__wait_for_json()
+            print(j)
+            json_msg = json.loads(j)
             if time.time() - init_time > 1:
                 return None
         ver = b64decode(json_msg['b']).lstrip(b'\x00')
