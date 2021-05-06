@@ -14,7 +14,7 @@ from io import open
 from base64 import b64encode
 from urllib.error import URLError
 
-from modi_firmware_updater.util.connection_util import SerTask, list_modi_ports 
+from modi_firmware_updater.util.connection_util import SerTask, list_modi_ports
 from modi_firmware_updater.util.message_util import (
     unpack_data, decode_message, parse_message
 )
@@ -74,7 +74,7 @@ class STM32FirmwareUpdater:
     def __del__(self):
         try:
             self.close()
-        except:
+        except serial.SerialException:
             print('Magic del is called with an exception')
 
     def set_ui(self, ui):
@@ -156,7 +156,8 @@ class STM32FirmwareUpdater:
             modi_num = len(list_modi_ports())
             if self.ui.is_english:
                 self.ui.update_network_stm32.setText(
-                    "Reconnect network module and click the button again please."
+                    "Reconnect network module and "
+                    "click the button again please."
                 )
             else:
                 self.ui.update_network_stm32.setText(
@@ -328,13 +329,15 @@ class STM32FirmwareUpdater:
                         if self.ui.is_english:
                             self.ui.update_stm32_modules.setText(
                                 f"STM32 modules update is in progress. "
-                                f"({num_updated} / {num_to_update+num_updated})"
+                                f"({num_updated} / "
+                                f"{num_to_update + num_updated})"
                                 f" ({progress}%)"
                             )
                         else:
                             self.ui.update_stm32_modules.setText(
                                 f"모듈 초기화가 진행중입니다. "
-                                f"({num_updated} / {num_to_update+num_updated})"
+                                f"({num_updated} / "
+                                f"{num_to_update + num_updated})"
                                 f" ({progress}%)"
                             )
 
@@ -475,7 +478,8 @@ class STM32FirmwareUpdater:
                             "모듈 초기화"
                         )
                 self.ui.update_network_esp32.setStyleSheet(
-                    f'border-image: url({self.ui.active_path}); font-size: 16px'
+                    f'border-image: url({self.ui.active_path});'
+                    'font-size: 16px'
                 )
                 self.ui.update_network_esp32.setEnabled(True)
 

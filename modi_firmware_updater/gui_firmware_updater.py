@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import logging
+import logging.handlers
 import pathlib
 
 import threading as th
@@ -209,7 +210,7 @@ class Form(QDialog):
             'ESP32 Firmware Updater has been initialized for esp update!'
         )
         th.Thread(
-            target=self.__click_motion, args=(0,button_start), daemon=True
+            target=self.__click_motion, args=(0, button_start), daemon=True
         ).start()
         esp32_updater = ESP32FirmwareUpdater()
         esp32_updater.set_ui(self.ui)
@@ -228,7 +229,7 @@ class Form(QDialog):
             'STM32 Firmware Updater has been initialized for module update!'
         )
         th.Thread(
-            target=self.__click_motion, args=(1,button_start), daemon=True
+            target=self.__click_motion, args=(1, button_start), daemon=True
         ).start()
         stm32_updater = STM32FirmwareUpdater()
         stm32_updater.set_ui(self.ui)
@@ -249,7 +250,7 @@ class Form(QDialog):
             'STM32 Firmware Updater has been initialized for base update!'
         )
         th.Thread(
-            target=self.__click_motion, args=(2,button_start), daemon=True
+            target=self.__click_motion, args=(2, button_start), daemon=True
         ).start()
         stm32_updater = STM32FirmwareUpdater()
         stm32_updater.set_ui(self.ui)
@@ -267,7 +268,7 @@ class Form(QDialog):
             'font-size: 13px'
         )
         th.Thread(
-            target=self.__click_motion, args=(3,button_start), daemon=True
+            target=self.__click_motion, args=(3, button_start), daemon=True
         ).start()
         if self.console:
             self.ui.console.hide()
@@ -284,7 +285,7 @@ class Form(QDialog):
             'font-size: 13px'
         )
         th.Thread(
-            target=self.__click_motion, args=(4,button_start), daemon=True
+            target=self.__click_motion, args=(4, button_start), daemon=True
         ).start()
         button_en = [
             'Update Network ESP32',
@@ -322,7 +323,17 @@ class Form(QDialog):
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
 
-        logger.addHandler(file_handler)
+        # smtp_handler = logging.handlers.SMTPHandler(
+        #     mailhost='mailserver',
+        #     fromaddr='canddang95@naver.com',
+        #     toaddrs='yjm9507@yonsei.ac.kr',
+        #     subject='GUI MODI Firmware Updater Log',
+        # )
+        # smtp_handler.setLevel(logging.DEBUG)
+        # smtp_handler.setFormatter(formatter)
+
+        # logger.addHandler(file_handler)
+        # logger.addHandler(smtp_handler)
         return logger
 
     def __click_motion(self, button_type, start_time):
@@ -332,7 +343,8 @@ class Form(QDialog):
 
         if button_type in [3, 4]:
             self.buttons[button_type].setStyleSheet(
-                f'border-image: url({self.language_frame_path}); font-size: 13px'
+                f'border-image: url({self.language_frame_path});'
+                'font-size: 13px'
             )
         else:
             self.buttons[button_type].setStyleSheet(

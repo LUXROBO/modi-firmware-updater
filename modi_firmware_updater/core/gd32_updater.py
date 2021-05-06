@@ -3,7 +3,6 @@ import io
 import sys
 import time
 import json
-import serial
 import zipfile
 
 import threading as th
@@ -12,10 +11,9 @@ import urllib.request as ur
 from os import path
 from io import open
 from base64 import b64encode
-from importlib import import_module as im
 from urllib.error import URLError
 
-from modi_firmware_updater.util.connection_util import SerTask, is_on_pi
+from modi_firmware_updater.util.connection_util import SerTask
 from modi_firmware_updater.util.message_util import (
     unpack_data, decode_message, parse_message
 )
@@ -130,10 +128,7 @@ class GD32FirmwareUpdater:
         self.__conn.close_conn()
 
     def __open_conn(self):
-        if is_on_pi() and self.conn_type == 'can':
-            return im('modi.task.can_task').CanTask()
-        else:
-            return im('modi.task.ser_task').SerTask()
+        return SerTask()
 
     def reinitialize_serial_connection(self):
         print('Temporally disconnecting the serial connection...')
