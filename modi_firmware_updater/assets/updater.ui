@@ -31,7 +31,6 @@
   <property name="font">
    <font>
     <family>LuxHanSans</family>
-    <pointsize>15</pointsize>
    </font>
   </property>
   <property name="focusPolicy">
@@ -114,11 +113,11 @@
           <enum>Qt::Horizontal</enum>
          </property>
          <property name="sizeType">
-          <enum>QSizePolicy::Fixed</enum>
+          <enum>QSizePolicy::MinimumExpanding</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
-           <width>90</width>
+           <width>80</width>
            <height>20</height>
           </size>
          </property>
@@ -149,11 +148,11 @@
           <enum>Qt::Horizontal</enum>
          </property>
          <property name="sizeType">
-          <enum>QSizePolicy::Fixed</enum>
+          <enum>QSizePolicy::MinimumExpanding</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
-           <width>90</width>
+           <width>80</width>
            <height>20</height>
           </size>
          </property>
@@ -252,7 +251,6 @@
        <property name="font">
         <font>
          <family>LuxHanSans</family>
-         <pointsize>15</pointsize>
          <kerning>true</kerning>
         </font>
        </property>
@@ -315,7 +313,6 @@
        <property name="font">
         <font>
          <family>LuxHanSans</family>
-         <pointsize>15</pointsize>
          <kerning>true</kerning>
         </font>
        </property>
@@ -375,7 +372,6 @@
        <property name="font">
         <font>
          <family>LuxHanSans</family>
-         <pointsize>15</pointsize>
          <kerning>true</kerning>
         </font>
        </property>
@@ -446,11 +442,6 @@
        <width>550</width>
        <height>0</height>
       </size>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
      </property>
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>

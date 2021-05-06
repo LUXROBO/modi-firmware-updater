@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import logging
+import logging.handlers
 import pathlib
 
 import threading as th
@@ -124,20 +125,21 @@ class Form(QDialog):
         )
 
         self.ui.update_network_esp32.setStyleSheet(
-            f'border-image: url({self.active_path})'
+            f'border-image: url({self.active_path}); font-size: 16px'
         )
         self.ui.update_stm32_modules.setStyleSheet(
-            f'border-image: url({self.active_path})'
+            f'border-image: url({self.active_path}); font-size: 16px'
         )
         self.ui.update_network_stm32.setStyleSheet(
-            f'border-image: url({self.active_path})'
+            f'border-image: url({self.active_path}); font-size: 16px'
         )
         self.ui.translate_button.setStyleSheet(
-            f'border-image: url({self.language_frame_path})'
+            f'border-image: url({self.language_frame_path}); font-size: 13px'
         )
         self.ui.devmode_button.setStyleSheet(
-            f'border-image: url({self.language_frame_path})'
+            f'border-image: url({self.language_frame_path}); font-size: 13px'
         )
+        self.ui.console.setStyleSheet('font-size: 10px')
 
         self.ui.setWindowTitle('MODI Firmware Updater')
 
@@ -201,14 +203,14 @@ class Form(QDialog):
         if self.firmware_updater and self.firmware_updater.update_in_progress:
             return
         self.ui.update_network_esp32.setStyleSheet(
-            f'border-image: url({self.pressed_path})'
+            f'border-image: url({self.pressed_path}); font-size: 16px'
         )
         self.ui.console.clear()
         print(
             'ESP32 Firmware Updater has been initialized for esp update!'
         )
         th.Thread(
-            target=self.__click_motion, args=(0,button_start), daemon=True
+            target=self.__click_motion, args=(0, button_start), daemon=True
         ).start()
         esp32_updater = ESP32FirmwareUpdater()
         esp32_updater.set_ui(self.ui)
@@ -220,14 +222,14 @@ class Form(QDialog):
         if self.firmware_updater and self.firmware_updater.update_in_progress:
             return
         self.ui.update_stm32_modules.setStyleSheet(
-            f'border-image: url({self.pressed_path})'
+            f'border-image: url({self.pressed_path}); font-size: 16px'
         )
         self.ui.console.clear()
         print(
             'STM32 Firmware Updater has been initialized for module update!'
         )
         th.Thread(
-            target=self.__click_motion, args=(1,button_start), daemon=True
+            target=self.__click_motion, args=(1, button_start), daemon=True
         ).start()
         stm32_updater = STM32FirmwareUpdater()
         stm32_updater.set_ui(self.ui)
@@ -241,14 +243,14 @@ class Form(QDialog):
         if self.firmware_updater and self.firmware_updater.update_in_progress:
             return
         self.ui.update_network_stm32.setStyleSheet(
-            f'border-image: url({self.pressed_path})'
+            f'border-image: url({self.pressed_path}); font-size: 16px'
         )
         self.ui.console.clear()
         print(
             'STM32 Firmware Updater has been initialized for base update!'
         )
         th.Thread(
-            target=self.__click_motion, args=(2,button_start), daemon=True
+            target=self.__click_motion, args=(2, button_start), daemon=True
         ).start()
         stm32_updater = STM32FirmwareUpdater()
         stm32_updater.set_ui(self.ui)
@@ -262,10 +264,11 @@ class Form(QDialog):
     def dev_mode_button(self):
         button_start = time.time()
         self.ui.devmode_button.setStyleSheet(
-            f'border-image: url({self.language_frame_pressed_path})'
+            f'border-image: url({self.language_frame_pressed_path});'
+            'font-size: 13px'
         )
         th.Thread(
-            target=self.__click_motion, args=(3,button_start), daemon=True
+            target=self.__click_motion, args=(3, button_start), daemon=True
         ).start()
         if self.console:
             self.ui.console.hide()
@@ -278,10 +281,11 @@ class Form(QDialog):
     def translate_button_text(self):
         button_start = time.time()
         self.ui.translate_button.setStyleSheet(
-            f'border-image: url({self.language_frame_pressed_path})'
+            f'border-image: url({self.language_frame_pressed_path});'
+            'font-size: 13px'
         )
         th.Thread(
-            target=self.__click_motion, args=(4,button_start), daemon=True
+            target=self.__click_motion, args=(4, button_start), daemon=True
         ).start()
         button_en = [
             'Update Network ESP32',
@@ -319,7 +323,17 @@ class Form(QDialog):
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
 
-        logger.addHandler(file_handler)
+        # smtp_handler = logging.handlers.SMTPHandler(
+        #     mailhost='mailserver',
+        #     fromaddr='canddang95@naver.com',
+        #     toaddrs='yjm9507@yonsei.ac.kr',
+        #     subject='GUI MODI Firmware Updater Log',
+        # )
+        # smtp_handler.setLevel(logging.DEBUG)
+        # smtp_handler.setFormatter(formatter)
+
+        # logger.addHandler(file_handler)
+        # logger.addHandler(smtp_handler)
         return logger
 
     def __click_motion(self, button_type, start_time):
@@ -329,16 +343,19 @@ class Form(QDialog):
 
         if button_type in [3, 4]:
             self.buttons[button_type].setStyleSheet(
-                f'border-image: url({self.language_frame_path})'
+                f'border-image: url({self.language_frame_path});'
+                'font-size: 13px'
             )
         else:
             self.buttons[button_type].setStyleSheet(
-                f'border-image: url({self.active_path})'
+                f'border-image: url({self.active_path}); font-size: 16px'
             )
             for i, q_button in enumerate(self.buttons):
                 if i in [button_type, 3, 4]:
                     continue
-                q_button.setStyleSheet(f'border-image: url({self.inactive_path})')
+                q_button.setStyleSheet(
+                    f'border-image: url({self.inactive_path}); font-size: 16px'
+                )
                 q_button.setEnabled(False)
 
     def __append_text_line(self, line):

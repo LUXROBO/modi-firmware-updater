@@ -3,3 +3,4 @@ pyqt5
 pyinstaller
 pytest
 mypy
+flake8

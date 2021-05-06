@@ -11,21 +11,29 @@ import urllib.request as ur
 
 from os import path
 from io import open
-from base64 import b64encode, b64decode
-from importlib import import_module as im
+from base64 import b64encode
 from urllib.error import URLError
 
-from modi_firmware_updater.util.connection_util import SerTask
-from modi_firmware_updater.util.module_util import Module
+from modi_firmware_updater.util.connection_util import SerTask, list_modi_ports
 from modi_firmware_updater.util.message_util import (
     unpack_data, decode_message, parse_message
 )
-from modi_firmware_updater.util.connection_util import (
-    list_modi_ports, is_on_pi
-)
 from modi_firmware_updater.util.module_util import (
-    get_module_type_from_uuid
+    Module, get_module_type_from_uuid
 )
+
+
+def retry(exception_to_catch):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except exception_to_catch:
+                return wrapper(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 
 class STM32FirmwareUpdater:
@@ -66,7 +74,7 @@ class STM32FirmwareUpdater:
     def __del__(self):
         try:
             self.close()
-        except:
+        except serial.SerialException:
             print('Magic del is called with an exception')
 
     def set_ui(self, ui):
@@ -85,10 +93,10 @@ class STM32FirmwareUpdater:
 
     def update_module_firmware(self, update_network_base=False):
         if update_network_base:
-            reinit_mode = 1
+            r_mode = 1
             self.update_network_base = True
             # Retrieve the network id only and update it accordingly
-            timeout, delay = 3, 0.1
+            timeout, delay = 3, 0.2
             while not self.network_id:
                 if timeout <= 0:
                     if not self.update_in_progress:
@@ -97,7 +105,7 @@ class STM32FirmwareUpdater:
                             'broadcast id will be used instead.'
                         )
                     self.network_id = 0xFFF
-                    reinit_mode = 2
+                    r_mode = 2
                     break
                 self.request_network_id()
                 timeout -= delay
@@ -114,7 +122,7 @@ class STM32FirmwareUpdater:
                 )
             if not self.update_in_progress:
                 self.request_to_update_firmware(
-                    self.network_id, is_network=True, reinit_mode=1
+                    self.network_id, is_network=True, reinit_mode=r_mode
                 )
         else:
             self.reset_state()
@@ -139,7 +147,7 @@ class STM32FirmwareUpdater:
             if not list_modi_ports():
                 disconnect = True
             if disconnect:
-                if modi_num == list_modi_ports():
+                if modi_num == len(list_modi_ports()):
                     self.__reinitialize_serial_connection()
                     break
 
@@ -148,7 +156,8 @@ class STM32FirmwareUpdater:
             modi_num = len(list_modi_ports())
             if self.ui.is_english:
                 self.ui.update_network_stm32.setText(
-                    "Reconnect network module and click the button again please."
+                    "Reconnect network module and "
+                    "click the button again please."
                 )
             else:
                 self.ui.update_network_stm32.setText(
@@ -315,14 +324,21 @@ class STM32FirmwareUpdater:
                                 f"({progress}%)"
                             )
                     else:
+                        num_to_update = len(self.modules_to_update)
+                        num_updated = len(self.modules_updated)
                         if self.ui.is_english:
                             self.ui.update_stm32_modules.setText(
                                 f"STM32 modules update is in progress. "
-                                f"({progress}%)"
+                                f"({num_updated} / "
+                                f"{num_to_update + num_updated})"
+                                f" ({progress}%)"
                             )
                         else:
                             self.ui.update_stm32_modules.setText(
-                                f"모듈 초기화가 진행중입니다. ({progress}%)"
+                                f"모듈 초기화가 진행중입니다. "
+                                f"({num_updated} / "
+                                f"{num_to_update + num_updated})"
+                                f" ({progress}%)"
                             )
 
                 print(
@@ -435,7 +451,8 @@ class STM32FirmwareUpdater:
             if self.ui:
                 if self.update_network_base:
                     self.ui.update_stm32_modules.setStyleSheet(
-                        f'border-image: url({self.ui.active_path})'
+                        f'border-image: url({self.ui.active_path});'
+                        'font-size: 16px'
                     )
                     self.ui.update_stm32_modules.setEnabled(True)
                     if self.ui.is_english:
@@ -448,7 +465,8 @@ class STM32FirmwareUpdater:
                         )
                 else:
                     self.ui.update_network_stm32.setStyleSheet(
-                        f'border-image: url({self.ui.active_path})'
+                        f'border-image: url({self.ui.active_path});'
+                        'font-size: 16px'
                     )
                     self.ui.update_network_stm32.setEnabled(True)
                     if self.ui.is_english:
@@ -460,7 +478,8 @@ class STM32FirmwareUpdater:
                             "모듈 초기화"
                         )
                 self.ui.update_network_esp32.setStyleSheet(
-                    f'border-image: url({self.ui.active_path})'
+                    f'border-image: url({self.ui.active_path});'
+                    'font-size: 16px'
                 )
                 self.ui.update_network_esp32.setEnabled(True)
 
@@ -508,6 +527,7 @@ class STM32FirmwareUpdater:
         return json.dumps(message, separators=(",", ":"))
 
     # TODO: Use retry decorator here
+    @retry(Exception)
     def send_end_flash_data(self, module_type: str, module_id: int,
                             end_flash_data: bytearray) -> None:
         # Write end-flash data until success
@@ -710,16 +730,3 @@ class STM32FirmwareUpdater:
                 self.add_to_waitlist(module_id, module_type)
             else:
                 self.update_module(module_id, module_type)
-
-
-def retry(exception_to_catch):
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            try:
-                return func(*args, **kwargs)
-            except exception_to_catch:
-                return wrapper(*args, **kwargs)
-
-        return wrapper
-
-    return decorator
