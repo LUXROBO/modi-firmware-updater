@@ -25,9 +25,6 @@ jobs:
     - name: Run convention tests
       run: |
         python -m flake8 modi_firmware_updater tests --ignore E265,W503,W504
-    - name: Run type check
-      run: |
-        python -m mypy modi_firmware_updater
   build-macos:
     name: macOS Test
     runs-on: macos-latest
@@ -50,9 +47,6 @@ jobs:
     - name: Run convention tests
       run: |
         python -m flake8 modi_firmware_updater  tests --ignore E265,W503,W504
-    - name: Run type check
-      run: |
-        python -m mypy modi_firmware_updater
   build-windows:
     name: Windows Test
     runs-on: windows-latest
@@ -75,7 +69,4 @@ jobs:
     - name: Run convention tests
       run: |
         python -m flake8 modi_firmware_updater  tests --ignore E265,W503,W504
-    - name: Run type check
-      run: |
-        python -m mypy modi_firmware_updater
 
