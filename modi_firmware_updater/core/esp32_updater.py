@@ -231,6 +231,7 @@ class ESP32FirmwareUpdater(serial.Serial):
             json_pkt = self.read()
             if json_pkt == b'':
                 return ''
+            time.sleep(0.1)
         json_pkt += self.read_until(b'}')
         return json_pkt
 
