@@ -56,6 +56,14 @@ class Form(QDialog):
 
     def __init__(self, installer=False):
         self.logger = self.__init_logger()
+
+        def my_exception_hook(exctype, value, traceback):
+            print(exctype, value, traceback)
+            sys._excepthook(exctype, value, traceback)
+
+        sys._excepthook = sys.excepthook
+        sys.excepthook = my_exception_hook
+
         QDialog.__init__(self)
         if installer:
             ui_path = os.path.join(
@@ -323,17 +331,6 @@ class Form(QDialog):
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
 
-        # smtp_handler = logging.handlers.SMTPHandler(
-        #     mailhost='mailserver',
-        #     fromaddr='canddang95@naver.com',
-        #     toaddrs='yjm9507@yonsei.ac.kr',
-        #     subject='GUI MODI Firmware Updater Log',
-        # )
-        # smtp_handler.setLevel(logging.DEBUG)
-        # smtp_handler.setFormatter(formatter)
-
-        # logger.addHandler(file_handler)
-        # logger.addHandler(smtp_handler)
         return logger
 
     def __click_motion(self, button_type, start_time):
