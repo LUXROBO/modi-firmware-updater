@@ -59,6 +59,10 @@ class Form(QDialog):
 
         def my_exception_hook(exctype, value, traceback):
             print(exctype, value, traceback)
+            self.popup = QtWidgets.QMessageBox()
+            self.popup.setText('Close')
+            self.popup.buttonClicked.connect(self.btn)
+            self.popup.show()
             sys._excepthook(exctype, value, traceback)
 
         sys._excepthook = sys.excepthook
@@ -315,6 +319,9 @@ class Form(QDialog):
         self.ui.is_english = not self.ui.is_english
         for i, button in enumerate(self.buttons):
             button.setText(appropriate_translation[i])
+
+    def btn(self):
+        self.ui.close()
 
     #
     # Helper functions
