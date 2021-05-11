@@ -474,4 +474,4 @@ class ESP32FirmwareUpdater(serial.Serial):
         curr_bar = 50 * current // total
         rest_bar = 50 - curr_bar
         return f"Firmware Upload: [{'=' * curr_bar}>{'.' * rest_bar}] " \
-               f"{100 * current / total:3.2f}%"
+               f"{100 * current / total:3.1f}%"
