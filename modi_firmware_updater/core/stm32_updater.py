@@ -397,7 +397,7 @@ class STM32FirmwareUpdater:
         if self.ui:
             version_path = root_path + '/' + version_file
             for line in ur.urlopen(version_path, timeout=5):
-                version_info = line.decode('utf-8').lstrip('v')
+                version_info = line.decode('utf-8').lstrip('v').rstrip('\n')
         else:
             if self.update_network_base:
                 version_file = 'base_' + version_file
