@@ -57,16 +57,17 @@ class Form(QDialog):
     def __init__(self, installer=False):
         self.logger = self.__init_logger()
 
-        def my_exception_hook(exctype, value, traceback):
-            print(exctype, value, traceback)
-            self.popup = QtWidgets.QMessageBox()
-            self.popup.setText('Close')
-            self.popup.buttonClicked.connect(self.btn)
-            self.popup.show()
+        def custom_exception_hook(exctype, value, traceback):
             sys._excepthook(exctype, value, traceback)
+            self.popup = QtWidgets.QMessageBox()
+            self.popup.setIcon(self.popup.Icon.Warning)
+            self.popup.setText('Warning')
+            self.popup.setInformativeText(str(value))
+            self.popup.buttonClicked.connect(self.popup_btn)
+            self.popup.show()
 
         sys._excepthook = sys.excepthook
-        sys.excepthook = my_exception_hook
+        sys.excepthook = custom_exception_hook
 
         QDialog.__init__(self)
         if installer:
@@ -320,7 +321,7 @@ class Form(QDialog):
         for i, button in enumerate(self.buttons):
             button.setText(appropriate_translation[i])
 
-    def btn(self):
+    def popup_btn(self):
         self.ui.close()
 
     #
