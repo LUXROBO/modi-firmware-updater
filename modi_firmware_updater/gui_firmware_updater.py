@@ -4,7 +4,7 @@ import time
 import logging
 import logging.handlers
 import pathlib
-
+import traceback as tb
 import threading as th
 
 from PyQt5 import uic
@@ -49,6 +49,35 @@ class StdoutRedirect(QObject):
         )
 
 
+class MyMessageBox(QtWidgets.QMessageBox):
+    def __init__(self):
+        QtWidgets.QMessageBox.__init__(self)
+        self.setSizeGripEnabled(True)
+        self.setWindowTitle('System Message')
+        self.setIcon(self.Icon.Warning)
+        self.setText('ERROR')
+        self.show()
+
+    def event(self, e):
+        result = QtWidgets.QMessageBox.event(self, e)
+
+        self.setMinimumHeight(100)
+        self.setMaximumHeight(16777215)
+        self.setMinimumWidth(200)
+        self.setMaximumWidth(16777215)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+
+        textEdit = self.findChild(QtWidgets.QTextEdit)
+        if textEdit != None :
+            textEdit.setMinimumHeight(100)
+            textEdit.setMaximumHeight(16777215)
+            textEdit.setMinimumWidth(500)
+            textEdit.setMaximumWidth(16777215)
+            textEdit.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+
+        return result
+
+
 class Form(QDialog):
     """
     GUI Form of MODI Firmware Updater
@@ -59,12 +88,10 @@ class Form(QDialog):
 
         def custom_exception_hook(exctype, value, traceback):
             sys._excepthook(exctype, value, traceback)
-            self.popup = QtWidgets.QMessageBox()
-            self.popup.setIcon(self.popup.Icon.Warning)
-            self.popup.setText('Warning')
+            self.popup = MyMessageBox()
             self.popup.setInformativeText(str(value))
+            self.popup.setDetailedText(str(tb.extract_tb(traceback)))
             self.popup.buttonClicked.connect(self.popup_btn)
-            self.popup.show()
 
         sys._excepthook = sys.excepthook
         sys.excepthook = custom_exception_hook
