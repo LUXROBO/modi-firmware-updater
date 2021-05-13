@@ -49,13 +49,19 @@ class StdoutRedirect(QObject):
         )
 
 
-class MyMessageBox(QtWidgets.QMessageBox):
-    def __init__(self):
+class PopupMessageBox(QtWidgets.QMessageBox):
+
+    def __init__(self, main_window):
         QtWidgets.QMessageBox.__init__(self)
+        self.window = main_window
         self.setSizeGripEnabled(True)
         self.setWindowTitle('System Message')
         self.setIcon(self.Icon.Warning)
         self.setText('ERROR')
+        close_btn = self.addButton('Exit', self.ActionRole)
+        close_btn.clicked.connect(self.close_btn)
+        report_btn = self.addButton('Report Error', self.ActionRole)
+        report_btn.clicked.connect(self.report_btn)
         self.show()
 
     def event(self, e):
@@ -65,17 +71,27 @@ class MyMessageBox(QtWidgets.QMessageBox):
         self.setMaximumHeight(16777215)
         self.setMinimumWidth(200)
         self.setMaximumWidth(16777215)
-        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        self.setSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+        )
 
         textEdit = self.findChild(QtWidgets.QTextEdit)
-        if textEdit != None :
+        if textEdit is not None:
             textEdit.setMinimumHeight(100)
             textEdit.setMaximumHeight(16777215)
             textEdit.setMinimumWidth(500)
             textEdit.setMaximumWidth(16777215)
-            textEdit.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+            textEdit.setSizePolicy(
+                QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+            )
 
         return result
+
+    def close_btn(self):
+        self.window.close()
+
+    def report_btn(self):
+        pass
 
 
 class Form(QDialog):
@@ -84,19 +100,17 @@ class Form(QDialog):
     """
 
     def __init__(self, installer=False):
-        self.logger = self.__init_logger()
-
-        def custom_exception_hook(exctype, value, traceback):
+        def custom_excepthook(exctype, value, traceback):
             sys._excepthook(exctype, value, traceback)
-            self.popup = MyMessageBox()
+            self.popup = PopupMessageBox(self.ui)
             self.popup.setInformativeText(str(value))
             self.popup.setDetailedText(str(tb.extract_tb(traceback)))
-            self.popup.buttonClicked.connect(self.popup_btn)
-
-        sys._excepthook = sys.excepthook
-        sys.excepthook = custom_exception_hook
 
         QDialog.__init__(self)
+        self.logger = self.__init_logger()
+        sys._excepthook = sys.excepthook
+        sys.excepthook = custom_excepthook
+
         if installer:
             ui_path = os.path.join(
                 os.path.dirname(__file__), 'updater.ui'
@@ -347,9 +361,6 @@ class Form(QDialog):
         self.ui.is_english = not self.ui.is_english
         for i, button in enumerate(self.buttons):
             button.setText(appropriate_translation[i])
-
-    def popup_btn(self):
-        self.ui.close()
 
     #
     # Helper functions
