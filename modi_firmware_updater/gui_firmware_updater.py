@@ -6,10 +6,11 @@ import logging.handlers
 import pathlib
 import traceback as tb
 import threading as th
+import _thread as _th
 
 from PyQt5 import uic
 from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QDialog
 
 from modi_firmware_updater.core.stm32_updater import STM32FirmwareUpdater
@@ -94,22 +95,28 @@ class PopupMessageBox(QtWidgets.QMessageBox):
         pass
 
 
+class ThreadSignal(QObject):
+    thread_error = pyqtSignal(_th._ExceptHookArgs)
+
+    def __init__(self, arg):
+        super().__init__()
+        self.arg = arg
+
+    def run(self):
+        self.thread_error.emit(self.arg)
+
+
 class Form(QDialog):
     """
     GUI Form of MODI Firmware Updater
     """
 
     def __init__(self, installer=False):
-        def custom_excepthook(exctype, value, traceback):
-            sys._excepthook(exctype, value, traceback)
-            self.popup = PopupMessageBox(self.ui)
-            self.popup.setInformativeText(str(value))
-            self.popup.setDetailedText(str(tb.extract_tb(traceback)))
-
         QDialog.__init__(self)
         self.logger = self.__init_logger()
-        sys._excepthook = sys.excepthook
-        sys.excepthook = custom_excepthook
+        self.__excepthook = sys.excepthook
+        sys.excepthook = self.__custom_excepthook
+        th.excepthook = self.__custom_thread_excepthook
 
         if installer:
             ui_path = os.path.join(
@@ -378,6 +385,23 @@ class Form(QDialog):
         file_handler.setFormatter(formatter)
 
         return logger
+
+    def __custom_excepthook(self, exctype, value, traceback):
+        self.__excepthook(exctype, value, traceback)
+        self.popup = PopupMessageBox(self.ui)
+        self.popup.setInformativeText(str(value))
+        self.popup.setDetailedText(str(tb.extract_tb(traceback)))
+
+    def __custom_thread_excepthook(self, args):
+        self.stream = ThreadSignal(args)
+        self.stream.thread_error.connect(self.__signal_emit)
+        self.stream.run()
+
+    @pyqtSlot(_th._ExceptHookArgs)
+    def __signal_emit(self, args):
+        self.__custom_excepthook(
+            args.exc_type, args.exc_value, args.exc_traceback
+        )
 
     def __click_motion(self, button_type, start_time):
         # Busy wait for 0.2 seconds
