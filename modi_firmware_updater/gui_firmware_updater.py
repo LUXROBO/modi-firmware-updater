@@ -83,7 +83,8 @@ class PopupMessageBox(QtWidgets.QMessageBox):
             textEdit.setMinimumWidth(500)
             textEdit.setMaximumWidth(16777215)
             textEdit.setSizePolicy(
-                QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+                QtWidgets.QSizePolicy.Expanding,
+                QtWidgets.QSizePolicy.Expanding
             )
 
         return result
