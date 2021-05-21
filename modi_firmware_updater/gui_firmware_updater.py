@@ -115,8 +115,8 @@ class Form(QDialog):
         QDialog.__init__(self)
         self.logger = self.__init_logger()
         self.__excepthook = sys.excepthook
-        sys.excepthook = self.__custom_excepthook
-        th.excepthook = self.__custom_thread_excepthook
+        sys.excepthook = self.__popup_excepthook
+        th.excepthook = self.__popup_thread_excepthook
 
         if installer:
             ui_path = os.path.join(
@@ -386,20 +386,20 @@ class Form(QDialog):
 
         return logger
 
-    def __custom_excepthook(self, exctype, value, traceback):
+    def __popup_excepthook(self, exctype, value, traceback):
         self.__excepthook(exctype, value, traceback)
         self.popup = PopupMessageBox(self.ui)
         self.popup.setInformativeText(str(value))
         self.popup.setDetailedText(str(tb.extract_tb(traceback)))
 
-    def __custom_thread_excepthook(self, args):
+    def __popup_thread_excepthook(self, args):
         self.stream = ThreadSignal(args)
-        self.stream.thread_error.connect(self.__signal_emit)
+        self.stream.thread_error.connect(self.__thread_error_hook)
         self.stream.run()
 
     @pyqtSlot(_th._ExceptHookArgs)
-    def __signal_emit(self, args):
-        self.__custom_excepthook(
+    def __thread_error_hook(self, args):
+        self.__popup_excepthook(
             args.exc_type, args.exc_value, args.exc_traceback
         )
 
