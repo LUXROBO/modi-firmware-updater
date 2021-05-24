@@ -52,13 +52,20 @@ class StdoutRedirect(QObject):
 
 class PopupMessageBox(QtWidgets.QMessageBox):
 
-    def __init__(self, main_window):
+    def __init__(self, main_window, level):
         QtWidgets.QMessageBox.__init__(self)
         self.window = main_window
         self.setSizeGripEnabled(True)
         self.setWindowTitle('System Message')
-        self.setIcon(self.Icon.Warning)
-        self.setText('ERROR')
+        if level == 'error':
+            self.setIcon(self.Icon.Warning)
+            self.setText('ERROR')
+        elif level == 'warning':
+            self.setIcon(self.Icon.Information)
+            self.setText('WARNING')
+            restart_btn = self.addButton('Ok', self.ActionRole)
+            restart_btn.clicked.connect(self.restart_btn)
+
         close_btn = self.addButton('Exit', self.ActionRole)
         close_btn.clicked.connect(self.close_btn)
         report_btn = self.addButton('Report Error', self.ActionRole)
@@ -98,13 +105,10 @@ class PopupMessageBox(QtWidgets.QMessageBox):
 
 class ThreadSignal(QObject):
     thread_error = pyqtSignal(_th._ExceptHookArgs)
+    thread_signal = pyqtSignal(object)
 
-    def __init__(self, arg):
+    def __init__(self):
         super().__init__()
-        self.arg = arg
-
-    def run(self):
-        self.thread_error.emit(self.arg)
 
 
 class Form(QDialog):
@@ -213,6 +217,9 @@ class Form(QDialog):
         )
         self.stdout.logger = self.logger
 
+        # Set signal for thread communication
+        self.stream = ThreadSignal()
+
         # Init variable to check if the program is in installation mode
         self.ui.installation = installer
 
@@ -250,6 +257,8 @@ class Form(QDialog):
         self.ui.pressed_path = self.pressed_path
         self.ui.language_frame_path = self.language_frame_path
         self.ui.language_frame_pressed_path = self.language_frame_pressed_path
+        self.ui.stream = self.stream
+        self.ui.popup = self._thread_signal_hook
 
         self.translate_button_text()
         self.translate_button_text()
@@ -389,20 +398,31 @@ class Form(QDialog):
 
     def __popup_excepthook(self, exctype, value, traceback):
         self.__excepthook(exctype, value, traceback)
-        self.popup = PopupMessageBox(self.ui)
+        self.popup = PopupMessageBox(self.ui, level='error')
         self.popup.setInformativeText(str(value))
         self.popup.setDetailedText(str(tb.extract_tb(traceback)))
 
-    def __popup_thread_excepthook(self, args):
-        self.stream = ThreadSignal(args)
+    def __popup_thread_excepthook(self, err_msg):
         self.stream.thread_error.connect(self.__thread_error_hook)
-        self.stream.run()
+        self.stream.thread_error.emit(err_msg)
 
     @pyqtSlot(_th._ExceptHookArgs)
-    def __thread_error_hook(self, args):
+    def __thread_error_hook(self, err_msg):
         self.__popup_excepthook(
-            args.exc_type, args.exc_value, args.exc_traceback
+            err_msg.exc_type, err_msg.exc_value, err_msg.exc_traceback
         )
+
+    @pyqtSlot(object)
+    def _thread_signal_hook(self):
+        self.thread_popup = PopupMessageBox(
+            self.ui, level='warning'
+        )
+        if self.button_in_english:
+            text = ('Reconnect network module and '
+                    'click the button again please.')
+        else:
+            text = '네트워크 모듈을 재연결 후 버튼을 다시 눌러주십시오.'
+        self.thread_popup.setInformativeText(text)
 
     def __click_motion(self, button_type, start_time):
         # Busy wait for 0.2 seconds
