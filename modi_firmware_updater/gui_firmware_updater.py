@@ -61,14 +61,15 @@ class PopupMessageBox(QtWidgets.QMessageBox):
         def error_popup():
             self.setIcon(self.Icon.Warning)
             self.setText('ERROR')
+
         def warning_popup():
             self.setIcon(self.Icon.Information)
             self.setText('WARNING')
             restart_btn = self.addButton('Ok', self.ActionRole)
             restart_btn.clicked.connect(self.restart_btn)
         func = {
-            'error' : error_popup,
-            'warning' : warning_popup,
+            'error': error_popup,
+            'warning': warning_popup,
         }.get(level)
         func()
 
