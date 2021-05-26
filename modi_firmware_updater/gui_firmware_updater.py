@@ -79,22 +79,26 @@ class PopupMessageBox(QtWidgets.QMessageBox):
         self.show()
 
     def event(self, e):
+        MAXSIZE = 16_777_215
+        MINHEIGHT = 100
+        MINWIDTH = 200
+        MINWIDTH_CHANGE = 500
         result = QtWidgets.QMessageBox.event(self, e)
 
-        self.setMinimumHeight(100)
-        self.setMaximumHeight(16777215)
-        self.setMinimumWidth(200)
-        self.setMaximumWidth(16777215)
+        self.setMinimumHeight(MINHEIGHT)
+        self.setMaximumHeight(MAXSIZE)
+        self.setMinimumWidth(MINWIDTH)
+        self.setMaximumWidth(MAXSIZE)
         self.setSizePolicy(
             QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
         )
 
         textEdit = self.findChild(QtWidgets.QTextEdit)
-        if textEdit is not None:
-            textEdit.setMinimumHeight(100)
-            textEdit.setMaximumHeight(16777215)
-            textEdit.setMinimumWidth(500)
-            textEdit.setMaximumWidth(16777215)
+        if not textEdit:
+            textEdit.setMinimumHeight(MINHEIGHT)
+            textEdit.setMaximumHeight(MAXSIZE)
+            textEdit.setMinimumWidth(MINWIDTH_CHANGE)
+            textEdit.setMaximumWidth(MAXSIZE)
             textEdit.setSizePolicy(
                 QtWidgets.QSizePolicy.Expanding,
                 QtWidgets.QSizePolicy.Expanding
