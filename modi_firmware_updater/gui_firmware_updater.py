@@ -114,7 +114,7 @@ class PopupMessageBox(QtWidgets.QMessageBox):
 
 
 class ThreadSignal(QObject):
-    thread_error = pyqtSignal(_th._ExceptHookArgs)
+    thread_error = pyqtSignal(_th_exc)
     thread_signal = pyqtSignal(object)
 
     def __init__(self):
@@ -416,7 +416,7 @@ class Form(QDialog):
         self.stream.thread_error.connect(self.__thread_error_hook)
         self.stream.thread_error.emit(err_msg)
 
-    @pyqtSlot(_th._ExceptHookArgs)
+    @pyqtSlot(_th_exc)
     def __thread_error_hook(self, err_msg):
         self.__popup_excepthook(
             err_msg.exc_type, err_msg.exc_value, err_msg.exc_traceback
