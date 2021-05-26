@@ -6,8 +6,8 @@ import logging.handlers
 import pathlib
 import traceback as tb
 import threading as th
-import _thread as _th
 
+from _thread import _ExceptHookArgs as _th_exc
 from PyQt5 import uic
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
@@ -57,14 +57,20 @@ class PopupMessageBox(QtWidgets.QMessageBox):
         self.window = main_window
         self.setSizeGripEnabled(True)
         self.setWindowTitle('System Message')
-        if level == 'error':
+
+        def error_popup():
             self.setIcon(self.Icon.Warning)
             self.setText('ERROR')
-        elif level == 'warning':
+        def warning_popup():
             self.setIcon(self.Icon.Information)
             self.setText('WARNING')
             restart_btn = self.addButton('Ok', self.ActionRole)
             restart_btn.clicked.connect(self.restart_btn)
+        func = {
+            'error' : error_popup,
+            'warning' : warning_popup,
+        }.get(level)
+        func()
 
         close_btn = self.addButton('Exit', self.ActionRole)
         close_btn.clicked.connect(self.close_btn)
