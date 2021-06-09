@@ -112,12 +112,10 @@ class PopupMessageBox(QtWidgets.QMessageBox):
         self.window.close()
 
     def report_btn(self):
-         pass
-
+        pass
     # def restart_btn(self):
     #     self.window.stream.thread_signal.connect(self.restart_update)
     #     self.window.stream.thread_signal.emit(True)
-
     # @pyqtSlot(object)
     # def restart_update(self, click):
     #     self.window.update_network_stm32.clicked(click)
