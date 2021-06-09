@@ -4,12 +4,13 @@ import time
 import logging
 import logging.handlers
 import pathlib
-
+import traceback as tb
 import threading as th
 
+from _thread import _ExceptHookArgs as _th_exc
 from PyQt5 import uic
 from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QDialog
 
 from modi_firmware_updater.core.stm32_updater import STM32FirmwareUpdater
@@ -49,14 +50,99 @@ class StdoutRedirect(QObject):
         )
 
 
+class PopupMessageBox(QtWidgets.QMessageBox):
+
+    def __init__(self, main_window, level):
+        QtWidgets.QMessageBox.__init__(self)
+        self.window = main_window
+        self.setSizeGripEnabled(True)
+        self.setWindowTitle('System Message')
+
+        def error_popup():
+            self.setIcon(self.Icon.Warning)
+            self.setText('ERROR')
+
+        def warning_popup():
+            self.setIcon(self.Icon.Information)
+            self.setText('WARNING')
+            restart_btn = self.addButton('Ok', self.ActionRole)
+            restart_btn.clicked.connect(self.restart_btn)
+
+        func = {
+            'error': error_popup,
+            'warning': warning_popup,
+        }.get(level)
+        func()
+
+        close_btn = self.addButton('Exit', self.ActionRole)
+        close_btn.clicked.connect(self.close_btn)
+        # report_btn = self.addButton('Report Error', self.ActionRole)
+        # report_btn.clicked.connect(self.report_btn)
+        self.show()
+
+    def event(self, e):
+        MAXSIZE = 16_777_215
+        MINHEIGHT = 100
+        MINWIDTH = 200
+        MINWIDTH_CHANGE = 500
+        result = QtWidgets.QMessageBox.event(self, e)
+
+        self.setMinimumHeight(MINHEIGHT)
+        self.setMaximumHeight(MAXSIZE)
+        self.setMinimumWidth(MINWIDTH)
+        self.setMaximumWidth(MAXSIZE)
+        self.setSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+        )
+
+        textEdit = self.findChild(QtWidgets.QTextEdit)
+        if textEdit is not None:
+            textEdit.setMinimumHeight(MINHEIGHT)
+            textEdit.setMaximumHeight(MAXSIZE)
+            textEdit.setMinimumWidth(MINWIDTH_CHANGE)
+            textEdit.setMaximumWidth(MAXSIZE)
+            textEdit.setSizePolicy(
+                QtWidgets.QSizePolicy.Expanding,
+                QtWidgets.QSizePolicy.Expanding
+            )
+
+        return result
+
+    def close_btn(self):
+        self.window.close()
+
+    def report_btn(self):
+        pass
+    # def restart_btn(self):
+    #     self.window.stream.thread_signal.connect(self.restart_update)
+    #     self.window.stream.thread_signal.emit(True)
+    # @pyqtSlot(object)
+    # def restart_update(self, click):
+    #     self.window.update_network_stm32.clicked(click)
+
+
+class ThreadSignal(QObject):
+    thread_error = pyqtSignal(_th_exc)
+    thread_signal = pyqtSignal(object)
+
+    def __init__(self):
+        super().__init__()
+
+
 class Form(QDialog):
     """
     GUI Form of MODI Firmware Updater
     """
 
     def __init__(self, installer=False):
-        self.logger = self.__init_logger()
         QDialog.__init__(self)
+        self.logger = self.__init_logger()
+        self.__excepthook = sys.excepthook
+        sys.excepthook = self.__popup_excepthook
+        th.excepthook = self.__popup_thread_excepthook
+        self.err_list = list()
+        self.is_popup = False
+
         if installer:
             ui_path = os.path.join(
                 os.path.dirname(__file__), 'updater.ui'
@@ -151,6 +237,9 @@ class Form(QDialog):
         )
         self.stdout.logger = self.logger
 
+        # Set signal for thread communication
+        self.stream = ThreadSignal()
+
         # Init variable to check if the program is in installation mode
         self.ui.installation = installer
 
@@ -188,6 +277,8 @@ class Form(QDialog):
         self.ui.pressed_path = self.pressed_path
         self.ui.language_frame_path = self.language_frame_path
         self.ui.language_frame_pressed_path = self.language_frame_pressed_path
+        self.ui.stream = self.stream
+        self.ui.popup = self._thread_signal_hook
 
         self.translate_button_text()
         self.translate_button_text()
@@ -323,18 +414,42 @@ class Form(QDialog):
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
 
-        # smtp_handler = logging.handlers.SMTPHandler(
-        #     mailhost='mailserver',
-        #     fromaddr='canddang95@naver.com',
-        #     toaddrs='yjm9507@yonsei.ac.kr',
-        #     subject='GUI MODI Firmware Updater Log',
-        # )
-        # smtp_handler.setLevel(logging.DEBUG)
-        # smtp_handler.setFormatter(formatter)
-
-        # logger.addHandler(file_handler)
-        # logger.addHandler(smtp_handler)
         return logger
+
+    def __popup_excepthook(self, exctype, value, traceback):
+        self.__excepthook(exctype, value, traceback)
+        if self.is_popup:
+            return
+        self.popup = PopupMessageBox(self.ui, level='error')
+        self.popup.setInformativeText(str(value))
+        self.popup.setDetailedText(str(tb.extract_tb(traceback)))
+        self.is_popup = True
+
+    def __popup_thread_excepthook(self, err_msg):
+        if err_msg.exc_type in self.err_list:
+            return
+        self.err_list.append(err_msg.exc_type)
+        self.stream.thread_error.connect(self.__thread_error_hook)
+        self.stream.thread_error.emit(err_msg)
+
+    @pyqtSlot(_th_exc)
+    def __thread_error_hook(self, err_msg):
+        self.__popup_excepthook(
+            err_msg.exc_type, err_msg.exc_value, err_msg.exc_traceback
+        )
+
+    @pyqtSlot(object)
+    def _thread_signal_hook(self):
+        self.thread_popup = PopupMessageBox(
+            self.ui, level='warning'
+        )
+        if self.button_in_english:
+            text = ('Reconnect network module and '
+                    'click the button again please.')
+        else:
+            text = '네트워크 모듈을 재연결 후 버튼을 다시 눌러주십시오.'
+        self.thread_popup.setInformativeText(text)
+        self.is_popup = True
 
     def __click_motion(self, button_type, start_time):
         # Busy wait for 0.2 seconds

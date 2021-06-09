@@ -154,15 +154,8 @@ class STM32FirmwareUpdater:
     def reinitialize_serial_connection(self, reinit_mode=1):
         if self.ui and self.update_network_base and reinit_mode == 2:
             modi_num = len(list_modi_ports())
-            if self.ui.is_english:
-                self.ui.update_network_stm32.setText(
-                    "Reconnect network module and "
-                    "click the button again please."
-                )
-            else:
-                self.ui.update_network_stm32.setText(
-                    "네트워크 모듈을 재연결 후 버튼을 다시 눌러주십시오."
-                )
+            self.ui.stream.thread_signal.connect(self.ui.popup)
+            self.ui.stream.thread_signal.emit(self)
             th.Thread(
                 target=self._reconnect_serial_connection,
                 args=(modi_num,),
@@ -397,7 +390,7 @@ class STM32FirmwareUpdater:
         if self.ui:
             version_path = root_path + '/' + version_file
             for line in ur.urlopen(version_path, timeout=5):
-                version_info = line.decode('utf-8').lstrip('v')
+                version_info = line.decode('utf-8').lstrip('v').rstrip('\n')
         else:
             if self.update_network_base:
                 version_file = 'base_' + version_file

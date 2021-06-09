@@ -231,6 +231,7 @@ class ESP32FirmwareUpdater(serial.Serial):
             json_pkt = self.read()
             if json_pkt == b'':
                 return ''
+            time.sleep(0.1)
         json_pkt += self.read_until(b'}')
         return json_pkt
 
@@ -251,13 +252,11 @@ class ESP32FirmwareUpdater(serial.Serial):
         get_version_pkt = b'{"c":160,"s":25,"d":4095,"b":"AAAAAAAAAA==","l":8}'
         self.write(get_version_pkt)
         j = self.__wait_for_json()
-        print(j)
         json_msg = json.loads(j)
         init_time = time.time()
         while json_msg['c'] != 0xA1:
             self.write(get_version_pkt)
             j = self.__wait_for_json()
-            print(j)
             json_msg = json.loads(j)
             if time.time() - init_time > 1:
                 return None
@@ -472,5 +471,7 @@ class ESP32FirmwareUpdater(serial.Serial):
     def __progress_bar(current: int, total: int) -> str:
         curr_bar = 50 * current // total
         rest_bar = 50 - curr_bar
-        return f"Firmware Upload: [{'=' * curr_bar}>{'.' * rest_bar}] " \
-               f"{100 * current / total:3.2f}%"
+        return (
+            f"Firmware Upload: [{'=' * curr_bar}>{'.' * rest_bar}] "
+            f"{100 * current / total:3.1f}%"
+        )
