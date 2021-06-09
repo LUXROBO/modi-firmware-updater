@@ -67,6 +67,7 @@ class PopupMessageBox(QtWidgets.QMessageBox):
             self.setText('WARNING')
             restart_btn = self.addButton('Ok', self.ActionRole)
             restart_btn.clicked.connect(self.restart_btn)
+
         func = {
             'error': error_popup,
             'warning': warning_popup,
@@ -75,8 +76,8 @@ class PopupMessageBox(QtWidgets.QMessageBox):
 
         close_btn = self.addButton('Exit', self.ActionRole)
         close_btn.clicked.connect(self.close_btn)
-        report_btn = self.addButton('Report Error', self.ActionRole)
-        report_btn.clicked.connect(self.report_btn)
+        # report_btn = self.addButton('Report Error', self.ActionRole)
+        # report_btn.clicked.connect(self.report_btn)
         self.show()
 
     def event(self, e):
@@ -95,7 +96,7 @@ class PopupMessageBox(QtWidgets.QMessageBox):
         )
 
         textEdit = self.findChild(QtWidgets.QTextEdit)
-        if not textEdit:
+        if textEdit is not None:
             textEdit.setMinimumHeight(MINHEIGHT)
             textEdit.setMaximumHeight(MAXSIZE)
             textEdit.setMinimumWidth(MINWIDTH_CHANGE)
@@ -110,8 +111,16 @@ class PopupMessageBox(QtWidgets.QMessageBox):
     def close_btn(self):
         self.window.close()
 
-    def report_btn(self):
-        pass
+    # def report_btn(self):
+    #     pass
+
+    def restart_btn(self):
+        self.window.stream.thread_signal.connect(self.restart_update)
+        self.window.stream.thread_signal.emit(True)
+    
+    @pyqtSlot(object)
+    def restart_update(self, click):
+        self.window.update_network_stm32.clicked(click)
 
 
 class ThreadSignal(QObject):
@@ -133,6 +142,8 @@ class Form(QDialog):
         self.__excepthook = sys.excepthook
         sys.excepthook = self.__popup_excepthook
         th.excepthook = self.__popup_thread_excepthook
+        self.err_list = list()
+        self.is_popup = False
 
         if installer:
             ui_path = os.path.join(
@@ -409,11 +420,17 @@ class Form(QDialog):
 
     def __popup_excepthook(self, exctype, value, traceback):
         self.__excepthook(exctype, value, traceback)
+        if self.is_popup:
+            return
         self.popup = PopupMessageBox(self.ui, level='error')
         self.popup.setInformativeText(str(value))
         self.popup.setDetailedText(str(tb.extract_tb(traceback)))
+        self.is_popup = True
 
     def __popup_thread_excepthook(self, err_msg):
+        if err_msg.exc_type in self.err_list:
+            return
+        self.err_list.append(err_msg.exc_type)
         self.stream.thread_error.connect(self.__thread_error_hook)
         self.stream.thread_error.emit(err_msg)
 
@@ -434,6 +451,7 @@ class Form(QDialog):
         else:
             text = '네트워크 모듈을 재연결 후 버튼을 다시 눌러주십시오.'
         self.thread_popup.setInformativeText(text)
+        self.is_popup = True
 
     def __click_motion(self, button_type, start_time):
         # Busy wait for 0.2 seconds
