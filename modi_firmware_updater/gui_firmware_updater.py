@@ -7,7 +7,6 @@ import pathlib
 import traceback as tb
 import threading as th
 
-from _thread import _ExceptHookArgs as _th_exc
 from PyQt5 import uic
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
