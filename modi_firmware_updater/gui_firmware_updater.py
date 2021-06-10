@@ -7,7 +7,6 @@ import pathlib
 import traceback as tb
 import threading as th
 
-from _thread import _ExceptHookArgs as _th_exc
 from PyQt5 import uic
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
@@ -122,7 +121,7 @@ class PopupMessageBox(QtWidgets.QMessageBox):
 
 
 class ThreadSignal(QObject):
-    thread_error = pyqtSignal(_th_exc)
+    thread_error = pyqtSignal(object)
     thread_signal = pyqtSignal(object)
 
     def __init__(self):
@@ -432,7 +431,7 @@ class Form(QDialog):
         self.stream.thread_error.connect(self.__thread_error_hook)
         self.stream.thread_error.emit(err_msg)
 
-    @pyqtSlot(_th_exc)
+    @pyqtSlot(object)
     def __thread_error_hook(self, err_msg):
         self.__popup_excepthook(
             err_msg.exc_type, err_msg.exc_value, err_msg.exc_traceback
