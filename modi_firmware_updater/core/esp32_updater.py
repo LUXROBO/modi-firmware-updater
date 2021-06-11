@@ -67,6 +67,10 @@ class ESP32FirmwareUpdater(serial.Serial):
 
     def update_firmware(self, force=False):
         # is_up_to_date = False
+
+        print('Turning interpreter off...')
+        self.write(b'{"c":160,"s":0,"d":18,"b":"AAMAAAAA","l":6}')
+
         self.update_in_progress = True
         self.__boot_to_app()
         self.__version_to_update = self.__get_latest_version()
@@ -251,13 +255,11 @@ class ESP32FirmwareUpdater(serial.Serial):
     def __get_esp_version(self):
         get_version_pkt = b'{"c":160,"s":25,"d":4095,"b":"AAAAAAAAAA==","l":8}'
         self.write(get_version_pkt)
-        j = self.__wait_for_json()
-        json_msg = json.loads(j)
+        json_msg = json.loads(self.__wait_for_json())
         init_time = time.time()
         while json_msg['c'] != 0xA1:
             self.write(get_version_pkt)
-            j = self.__wait_for_json()
-            json_msg = json.loads(j)
+            json_msg = json.loads(self.__wait_for_json())
             if time.time() - init_time > 1:
                 return None
         ver = b64decode(json_msg['b']).lstrip(b'\x00')

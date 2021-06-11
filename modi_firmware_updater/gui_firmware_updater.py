@@ -64,8 +64,8 @@ class PopupMessageBox(QtWidgets.QMessageBox):
         def warning_popup():
             self.setIcon(self.Icon.Information)
             self.setText('WARNING')
-            restart_btn = self.addButton('Ok', self.ActionRole)
-            restart_btn.clicked.connect(self.restart_btn)
+            # restart_btn = self.addButton('Ok', self.ActionRole)
+            # restart_btn.clicked.connect(self.restart_btn)
 
         func = {
             'error': error_popup,
@@ -136,9 +136,9 @@ class Form(QDialog):
     def __init__(self, installer=False):
         QDialog.__init__(self)
         self.logger = self.__init_logger()
-        self.__excepthook = sys.excepthook
-        sys.excepthook = self.__popup_excepthook
-        th.excepthook = self.__popup_thread_excepthook
+        # self.__excepthook = sys.excepthook
+        # sys.excepthook = self.__popup_excepthook
+        # th.excepthook = self.__popup_thread_excepthook
         self.err_list = list()
         self.is_popup = False
 
