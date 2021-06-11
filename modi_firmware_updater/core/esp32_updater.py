@@ -68,7 +68,7 @@ class ESP32FirmwareUpdater(serial.Serial):
     def update_firmware(self, force=False):
         # is_up_to_date = False
 
-        # Send packet to turn interpreter off
+        print('Turning interpreter off...")
         self.write(b'{"c":160,"s":0,"d":18,"b":"AAMAAAAA","l":6}')
 
         self.update_in_progress = True
