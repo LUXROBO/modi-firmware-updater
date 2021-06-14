@@ -1,38 +1,30 @@
 ---
-name: Bug report
-about: Create a report to help us improve
+name: 버그 리포트 템플릿
+about: 입니다
 title: ''
 labels: ''
 assignees: ''
 
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+**간단 설명**
+버그가 무엇인지 명확하고 간결하게 설명 부탁드립니다.
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+**재현 방법**
+버그를 재현하는 순서:
+1. '...'로 이동
+2. '....' 버튼 클릭
+3. '....'로 스크롤 내리기
+4. 에러 확인
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+**기대 결과**
+기대하셨던 결과에 대한 명확하고 간결한 설명 부탁드립니다.
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+**스크린샷**
+해당되는 경우 문제를 설명하는 데 도움이되는 스크린 샷을 추가 해주세요.
 
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
+**테스트 환경**
+- OS: [e.g. macOS]
+- Updater Version [e.g. 0.1.0]
+- Python Version [e.g. 3.6.10]
 
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
-
-**Additional context**
-Add any other context about the problem here.
