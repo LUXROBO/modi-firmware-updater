@@ -66,8 +66,6 @@ class ESP32FirmwareUpdater(serial.Serial):
         self.ui = ui
 
     def update_firmware(self, force=False):
-        # is_up_to_date = False
-
         print('Turning interpreter off...')
         self.write(b'{"c":160,"s":0,"d":18,"b":"AAMAAAAA","l":6}')
 
@@ -83,20 +81,7 @@ class ESP32FirmwareUpdater(serial.Serial):
                     f" Do you still want to proceed? [y/n]: ")
                 if 'y' not in response:
                     return
-            # elif self.ui:
-            #     is_up_to_date = True
-            #     print(f"ESP32 is already up to date (v{self.version}).")
-            #     if self.ui.is_english:
-            #         self.ui.update_network_esp32.setText(
-            #             "Network ESP32 is already up to date."
-            #         )
-            #     else:
-            #         self.ui.update_network_esp32.setText(
-            #             "네트워크 모듈이 최신 버전입니다."
-            #         )
-            #     time.sleep(2)
 
-        # if not is_up_to_date:
         print(f"Updating v{self.version} to v{self.__version_to_update}")
         firmware_buffer = self.__compose_binary_firmware()
 
