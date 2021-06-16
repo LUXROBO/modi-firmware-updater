@@ -2,7 +2,6 @@ import os
 import sys
 import time
 import logging
-import logging.handlers
 import pathlib
 import traceback as tb
 import threading as th
