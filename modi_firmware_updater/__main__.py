@@ -2,11 +2,12 @@ import os
 import sys
 import time
 
+from textwrap import dedent
+
 from getopt import getopt, GetoptError
 
 from modi_firmware_updater.core.stm32_updater import STM32FirmwareUpdater
 from modi_firmware_updater.core.esp32_updater import ESP32FirmwareUpdater
-from modi_firmware_updater.core.gd32_updater import GD32FirmwareUpdater
 
 
 def check_option(*options):
@@ -17,6 +18,16 @@ def check_option(*options):
 
 
 if __name__ == '__main__':
+    usage = dedent(
+        """
+        Usage: python -m modi -<options>
+        Options:
+        -t, --tutorial: Interactive Tutorial
+        -d, --debug: Auto initialization debugging mode
+        -h, --help: Print out help page
+        """.rstrip()
+    )
+
     try:
         # All commands should be defined here in advance
         opts, args = getopt(
@@ -60,4 +71,3 @@ if __name__ == '__main__':
         fin_time = time.time()
         print(f'Took {fin_time - init_time:.2f} seconds to update')
         os._exit(0)
-
