@@ -1,18 +1,17 @@
-import os
-import sys
-import time
 import logging
+import os
 import pathlib
-import traceback as tb
+import sys
 import threading as th
+import time
+import traceback as tb
 
-from PyQt5 import uic
-from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets, uic
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QDialog
 
-from modi_firmware_updater.core.stm32_updater import STM32FirmwareUpdater
 from modi_firmware_updater.core.esp32_updater import ESP32FirmwareUpdater
+from modi_firmware_updater.core.stm32_updater import STM32FirmwareUpdater
 
 
 class StdoutRedirect(QObject):
