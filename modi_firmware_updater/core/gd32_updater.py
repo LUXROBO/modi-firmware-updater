@@ -1,25 +1,22 @@
 
 import io
-import sys
-import time
 import json
-import zipfile
-
+import sys
 import threading as th
+import time
 import urllib.request as ur
-
-from os import path
-from io import open
+import zipfile
 from base64 import b64encode
+from io import open
+from os import path
 from urllib.error import URLError
 
 from modi_firmware_updater.util.connection_util import SerTask
-from modi_firmware_updater.util.message_util import (
-    unpack_data, decode_message, parse_message
-)
-from modi_firmware_updater.util.module_util import (
-    Module, get_module_type_from_uuid
-)
+from modi_firmware_updater.util.message_util import (decode_message,
+                                                     parse_message,
+                                                     unpack_data)
+from modi_firmware_updater.util.module_util import (Module,
+                                                    get_module_type_from_uuid)
 
 
 def retry(exception_to_catch):

@@ -28,6 +28,9 @@ jobs:
     - name: Run code style check
       run: |
         python -m black --check modi_firmware_updater tests
+    - name: Run import sort check
+      run: |
+        python -m isort modi_firmware_updater tests --diff
   build-macos:
     name: macOS Test
     runs-on: macos-latest
@@ -53,6 +56,9 @@ jobs:
     - name: Run code style check
       run: |
         python -m black --check modi_firmware_updater tests
+    - name: Run import sort check
+      run: |
+        python -m isort modi_firmware_updater tests --diff
   build-windows:
     name: Windows Test
     runs-on: windows-latest
@@ -78,4 +84,7 @@ jobs:
     - name: Run code style check
       run: |
         python -m black --check modi_firmware_updater tests
+    - name: Run import sort check
+      run: |
+        python -m isort modi_firmware_updater tests --diff
 

@@ -1,18 +1,17 @@
 
 import io
+import json
+import pathlib
 import sys
 import time
-import json
-import serial
-import zipfile
-import pathlib
-
 import urllib.request as ur
-
-from os import path
+import zipfile
+from base64 import b64decode, b64encode
 from io import open
-from base64 import b64encode, b64decode
+from os import path
 from urllib.error import URLError
+
+import serial
 
 from modi_firmware_updater.util.connection_util import list_modi_ports
 

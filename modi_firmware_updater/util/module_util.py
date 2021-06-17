@@ -1,7 +1,7 @@
 
 import time
-from typing import Union
 from os import path
+from typing import Union
 
 from modi_firmware_updater.util.message_util import parse_message
 
