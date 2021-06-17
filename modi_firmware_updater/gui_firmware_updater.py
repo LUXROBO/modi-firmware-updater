@@ -15,7 +15,7 @@ from modi_firmware_updater.core.stm32_updater import STM32FirmwareUpdater
 
 
 class StdoutRedirect(QObject):
-    printOccur = pyqtSignal(str, str, name='print')
+    printOccur = pyqtSignal(str, str, name="print")
 
     def __init__(self):
         QObject.__init__(self, None)
@@ -30,7 +30,7 @@ class StdoutRedirect(QObject):
 
     def start(self):
         sys.stdout.write = self.write
-        sys.stderr.write = lambda msg: self.write(msg, color='red')
+        sys.stderr.write = lambda msg: self.write(msg, color="red")
 
     def write(self, s, color="black"):
         sys.stdout.flush()
@@ -41,37 +41,36 @@ class StdoutRedirect(QObject):
     @staticmethod
     def __is_redundant_line(line):
         return (
-            line.startswith('\rUpdating') or
-            line.startswith('\rFirmware Upload: [') or
-            len(line) < 3
+            line.startswith("\rUpdating")
+            or line.startswith("\rFirmware Upload: [")
+            or len(line) < 3
         )
 
 
 class PopupMessageBox(QtWidgets.QMessageBox):
-
     def __init__(self, main_window, level):
         QtWidgets.QMessageBox.__init__(self)
         self.window = main_window
         self.setSizeGripEnabled(True)
-        self.setWindowTitle('System Message')
+        self.setWindowTitle("System Message")
 
         def error_popup():
             self.setIcon(self.Icon.Warning)
-            self.setText('ERROR')
+            self.setText("ERROR")
 
         def warning_popup():
             self.setIcon(self.Icon.Information)
-            self.setText('WARNING')
-            self.addButton('Ok', self.ActionRole)
+            self.setText("WARNING")
+            self.addButton("Ok", self.ActionRole)
             # restart_btn.clicked.connect(self.restart_btn)
 
         func = {
-            'error': error_popup,
-            'warning': warning_popup,
+            "error": error_popup,
+            "warning": warning_popup,
         }.get(level)
         func()
 
-        close_btn = self.addButton('Exit', self.ActionRole)
+        close_btn = self.addButton("Exit", self.ActionRole)
         close_btn.clicked.connect(self.close_btn)
         # report_btn = self.addButton('Report Error', self.ActionRole)
         # report_btn.clicked.connect(self.report_btn)
@@ -100,7 +99,7 @@ class PopupMessageBox(QtWidgets.QMessageBox):
             textEdit.setMaximumWidth(MAXSIZE)
             textEdit.setSizePolicy(
                 QtWidgets.QSizePolicy.Expanding,
-                QtWidgets.QSizePolicy.Expanding
+                QtWidgets.QSizePolicy.Expanding,
             )
 
         return result
@@ -141,90 +140,74 @@ class Form(QDialog):
         self.is_popup = False
 
         if installer:
-            ui_path = os.path.join(
-                os.path.dirname(__file__), 'updater.ui'
-            )
-            if sys.platform.startswith('win'):
-                self.component_path = (
-                    pathlib.PurePosixPath(
-                        pathlib.PurePath(__file__),
-                        '..'
-                    )
+            ui_path = os.path.join(os.path.dirname(__file__), "updater.ui")
+            if sys.platform.startswith("win"):
+                self.component_path = pathlib.PurePosixPath(
+                    pathlib.PurePath(__file__), ".."
                 )
             else:
-                self.component_path = (
-                    os.path.dirname(__file__).replace(
-                        'util', ''
-                    )
+                self.component_path = os.path.dirname(__file__).replace(
+                    "util", ""
                 )
         else:
-            ui_path = (
-                os.path.join(
-                    os.path.dirname(__file__),
-                    'assets', 'updater.ui'
-                )
+            ui_path = os.path.join(
+                os.path.dirname(__file__), "assets", "updater.ui"
             )
-            if sys.platform.startswith('win'):
-                self.component_path = (
-                    pathlib.PurePosixPath(
-                        pathlib.PurePath(__file__),
-                        '..', 'assets', 'component'
-                    )
+            if sys.platform.startswith("win"):
+                self.component_path = pathlib.PurePosixPath(
+                    pathlib.PurePath(__file__), "..", "assets", "component"
                 )
             else:
-                self.component_path = (
-                    os.path.join(
-                        os.path.dirname(__file__),
-                        'assets', 'component'
-                    )
+                self.component_path = os.path.join(
+                    os.path.dirname(__file__), "assets", "component"
                 )
         self.ui = uic.loadUi(ui_path)
 
-        self.ui.setStyleSheet('background-color: white')
+        self.ui.setStyleSheet("background-color: white")
         self.ui.console.hide()
         self.ui.setFixedHeight(600)
 
         # Set LUXROBO logo image
-        logo_path = os.path.join(self.component_path, 'luxrobo_logo.png')
+        logo_path = os.path.join(self.component_path, "luxrobo_logo.png")
         qPixmapVar = QtGui.QPixmap()
         qPixmapVar.load(logo_path)
         self.ui.lux_logo.setPixmap(qPixmapVar)
 
         # Buttons image
         self.active_path = pathlib.PurePosixPath(
-            self.component_path, 'btn_frame_active.png'
+            self.component_path, "btn_frame_active.png"
         )
         self.inactive_path = pathlib.PurePosixPath(
-            self.component_path, 'btn_frame_inactive.png'
+            self.component_path, "btn_frame_inactive.png"
         )
         self.pressed_path = pathlib.PurePosixPath(
-            self.component_path, 'btn_frame_pressed.png'
+            self.component_path, "btn_frame_pressed.png"
         )
         self.language_frame_path = pathlib.PurePosixPath(
-            self.component_path, 'lang_frame.png'
+            self.component_path, "lang_frame.png"
         )
         self.language_frame_pressed_path = pathlib.PurePosixPath(
-            self.component_path, 'lang_frame_pressed.png'
+            self.component_path, "lang_frame_pressed.png"
         )
 
         self.ui.update_network_esp32.setStyleSheet(
-            f'border-image: url({self.active_path}); font-size: 16px'
+            f"border-image: url({self.active_path}); font-size: 16px"
         )
         self.ui.update_stm32_modules.setStyleSheet(
-            f'border-image: url({self.active_path}); font-size: 16px'
+            f"border-image: url({self.active_path}); font-size: 16px"
         )
         self.ui.update_network_stm32.setStyleSheet(
-            f'border-image: url({self.active_path}); font-size: 16px'
+            f"border-image: url({self.active_path}); font-size: 16px"
         )
         self.ui.translate_button.setStyleSheet(
-            f'border-image: url({self.language_frame_path}); font-size: 13px'
+            f"border-image: url({self.language_frame_path}); font-size: 13px"
         )
         self.ui.devmode_button.setStyleSheet(
-            f'border-image: url({self.language_frame_path}); font-size: 13px'
+            f"border-image: url({self.language_frame_path}); font-size: 13px"
         )
-        self.ui.console.setStyleSheet('font-size: 10px')
+        self.ui.console.setStyleSheet("font-size: 10px")
 
-        self.ui.setWindowTitle('MODI Firmware Updater')
+        self.ui.setWindowTitle("MODI Firmware Updater")
 
         # Redirect stdout to text browser (i.e. console in our UI)
         self.stdout = StdoutRedirect()
@@ -260,8 +243,8 @@ class Form(QDialog):
         self.ui.update_network_esp32.setDefault(False)
 
         # Print init status
-        time_now_str = time.strftime('[%Y/%m/%d@%X]', time.localtime())
-        print(time_now_str + ' GUI MODI Firmware Updater has been started!')
+        time_now_str = time.strftime("[%Y/%m/%d@%X]", time.localtime())
+        print(time_now_str + " GUI MODI Firmware Updater has been started!")
 
         # Set up field variables
         self.firmware_updater = None
@@ -291,12 +274,10 @@ class Form(QDialog):
         if self.firmware_updater and self.firmware_updater.update_in_progress:
             return
         self.ui.update_network_esp32.setStyleSheet(
-            f'border-image: url({self.pressed_path}); font-size: 16px'
+            f"border-image: url({self.pressed_path}); font-size: 16px"
         )
         self.ui.console.clear()
-        print(
-            'ESP32 Firmware Updater has been initialized for esp update!'
-        )
+        print("ESP32 Firmware Updater has been initialized for esp update!")
         th.Thread(
             target=self.__click_motion, args=(0, button_start), daemon=True
         ).start()
@@ -310,12 +291,10 @@ class Form(QDialog):
         if self.firmware_updater and self.firmware_updater.update_in_progress:
             return
         self.ui.update_stm32_modules.setStyleSheet(
-            f'border-image: url({self.pressed_path}); font-size: 16px'
+            f"border-image: url({self.pressed_path}); font-size: 16px"
         )
         self.ui.console.clear()
-        print(
-            'STM32 Firmware Updater has been initialized for module update!'
-        )
+        print("STM32 Firmware Updater has been initialized for module update!")
         th.Thread(
             target=self.__click_motion, args=(1, button_start), daemon=True
         ).start()
@@ -331,12 +310,10 @@ class Form(QDialog):
         if self.firmware_updater and self.firmware_updater.update_in_progress:
             return
         self.ui.update_network_stm32.setStyleSheet(
-            f'border-image: url({self.pressed_path}); font-size: 16px'
+            f"border-image: url({self.pressed_path}); font-size: 16px"
         )
         self.ui.console.clear()
-        print(
-            'STM32 Firmware Updater has been initialized for base update!'
-        )
+        print("STM32 Firmware Updater has been initialized for base update!")
         th.Thread(
             target=self.__click_motion, args=(2, button_start), daemon=True
         ).start()
@@ -345,15 +322,15 @@ class Form(QDialog):
         th.Thread(
             target=stm32_updater.update_module_firmware,
             args=(True,),
-            daemon=True
+            daemon=True,
         ).start()
         self.firmware_updater = stm32_updater
 
     def dev_mode_button(self):
         button_start = time.time()
         self.ui.devmode_button.setStyleSheet(
-            f'border-image: url({self.language_frame_pressed_path});'
-            'font-size: 13px'
+            f"border-image: url({self.language_frame_pressed_path});"
+            "font-size: 13px"
         )
         th.Thread(
             target=self.__click_motion, args=(3, button_start), daemon=True
@@ -369,28 +346,29 @@ class Form(QDialog):
     def translate_button_text(self):
         button_start = time.time()
         self.ui.translate_button.setStyleSheet(
-            f'border-image: url({self.language_frame_pressed_path});'
-            'font-size: 13px'
+            f"border-image: url({self.language_frame_pressed_path});"
+            "font-size: 13px"
         )
         th.Thread(
             target=self.__click_motion, args=(4, button_start), daemon=True
         ).start()
         button_en = [
-            'Update Network ESP32',
-            'Update STM32 Modules',
-            'Update Network STM32',
-            'Dev Mode',
-            '한국어',
+            "Update Network ESP32",
+            "Update STM32 Modules",
+            "Update Network STM32",
+            "Dev Mode",
+            "한국어",
         ]
         button_kr = [
-            '네트워크 모듈 업데이트',
-            '모듈 초기화',
-            '네트워크 모듈 초기화',
-            '개발자 모드',
-            'English',
+            "네트워크 모듈 업데이트",
+            "모듈 초기화",
+            "네트워크 모듈 초기화",
+            "개발자 모드",
+            "English",
         ]
-        appropriate_translation = \
+        appropriate_translation = (
             button_kr if self.button_in_english else button_en
+        )
         self.button_in_english = not self.button_in_english
         self.ui.is_english = not self.ui.is_english
         for i, button in enumerate(self.buttons):
@@ -401,13 +379,13 @@ class Form(QDialog):
     #
     @staticmethod
     def __init_logger():
-        logger = logging.getLogger('GUI MODI Firmware Updater Logger')
+        logger = logging.getLogger("GUI MODI Firmware Updater Logger")
         logger.setLevel(logging.DEBUG)
 
         formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
-        file_handler = logging.FileHandler('gmfu.log')
+        file_handler = logging.FileHandler("gmfu.log")
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
 
@@ -417,7 +395,7 @@ class Form(QDialog):
         self.__excepthook(exctype, value, traceback)
         if self.is_popup:
             return
-        self.popup = PopupMessageBox(self.ui, level='error')
+        self.popup = PopupMessageBox(self.ui, level="error")
         self.popup.setInformativeText(str(value))
         self.popup.setDetailedText(str(tb.extract_tb(traceback)))
         self.is_popup = True
@@ -437,14 +415,14 @@ class Form(QDialog):
 
     @pyqtSlot(object)
     def _thread_signal_hook(self):
-        self.thread_popup = PopupMessageBox(
-            self.ui, level='warning'
-        )
+        self.thread_popup = PopupMessageBox(self.ui, level="warning")
         if self.button_in_english:
-            text = ('Reconnect network module and '
-                    'click the button again please.')
+            text = (
+                "Reconnect network module and "
+                "click the button again please."
+            )
         else:
-            text = '네트워크 모듈을 재연결 후 버튼을 다시 눌러주십시오.'
+            text = "네트워크 모듈을 재연결 후 버튼을 다시 눌러주십시오."
         self.thread_popup.setInformativeText(text)
         self.is_popup = True
 
@@ -455,18 +433,18 @@ class Form(QDialog):
 
         if button_type in [3, 4]:
             self.buttons[button_type].setStyleSheet(
-                f'border-image: url({self.language_frame_path});'
-                'font-size: 13px'
+                f"border-image: url({self.language_frame_path});"
+                "font-size: 13px"
             )
         else:
             self.buttons[button_type].setStyleSheet(
-                f'border-image: url({self.active_path}); font-size: 16px'
+                f"border-image: url({self.active_path}); font-size: 16px"
             )
             for i, q_button in enumerate(self.buttons):
                 if i in [button_type, 3, 4]:
                     continue
                 q_button.setStyleSheet(
-                    f'border-image: url({self.inactive_path}); font-size: 16px'
+                    f"border-image: url({self.inactive_path}); font-size: 16px"
                 )
                 q_button.setEnabled(False)
 
@@ -495,7 +473,6 @@ class Form(QDialog):
 
     @staticmethod
     def __is_update_progress_line(line):
-        return (
-            line.startswith('\rUpdating') or
-            line.startswith('\rFirmware Upload: [')
+        return line.startswith("\rUpdating") or line.startswith(
+            "\rFirmware Upload: ["
         )

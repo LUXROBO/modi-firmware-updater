@@ -1,4 +1,3 @@
-
 import time
 from os import path
 from typing import Union
@@ -13,21 +12,20 @@ def get_module_type_from_uuid(uuid):
     type_indicator = str(hexadecimal)[:4]
     module_type = {
         # Input modules
-        '2000': 'env',
-        '2010': 'gyro',
-        '2020': 'mic',
-        '2030': 'button',
-        '2040': 'dial',
-        '2050': 'ultrasonic',
-        '2060': 'ir',
-
+        "2000": "env",
+        "2010": "gyro",
+        "2020": "mic",
+        "2030": "button",
+        "2040": "dial",
+        "2050": "ultrasonic",
+        "2060": "ir",
         # Output modules
-        '4000': 'display',
-        '4010': 'motor',
-        '4020': 'led',
-        '4030': 'speaker',
+        "4000": "display",
+        "4010": "motor",
+        "4020": "led",
+        "4030": "speaker",
     }.get(type_indicator)
-    return 'network' if module_type is None else module_type
+    return "network" if module_type is None else module_type
 
 
 class Module:
@@ -58,7 +56,7 @@ class Module:
 
         self.module_type = str()
         self._properties = dict()
-        self._topology = {'r': 0, 't': 0, 'l': 0, 'b': 0}
+        self._topology = {"r": 0, "t": 0, "l": 0, "b": 0}
 
         # sampling_rate = (100 - property_sampling_frequency) * 11, in ms
         self.prop_samp_freq = 91
@@ -99,8 +97,8 @@ class Module:
     @property
     def version(self):
         version_string = ""
-        version_string += str(self.__version >> 13) + '.'
-        version_string += str(self.__version % (2 ** 13) >> 8) + '.'
+        version_string += str(self.__version >> 13) + "."
+        version_string += str(self.__version % (2 ** 13) >> 8) + "."
         version_string += str(self.__version % (2 ** 8))
         return version_string
 
@@ -122,16 +120,13 @@ class Module:
 
     @property
     def is_up_to_date(self):
-        root_path = (
-            path.join(
-                path.dirname(__file__),
-                '..', 'assets', 'firmware', 'stm32'
-            )
+        root_path = path.join(
+            path.dirname(__file__), "..", "assets", "firmware", "stm32"
         )
-        version_path = path.join(root_path, 'version.txt')
+        version_path = path.join(root_path, "version.txt")
         with open(version_path) as version_file:
-            version_info = version_file.readline().lstrip('v').rstrip('\n')
-        version_digits = [int(digit) for digit in version_info.split('.')]
+            version_info = version_file.readline().lstrip("v").rstrip("\n")
+        version_digits = [int(digit) for digit in version_info.split(".")]
         latest_version = (
             version_digits[0] << 13
             | version_digits[1] << 8
@@ -140,7 +135,7 @@ class Module:
         return latest_version <= self.__version
 
     def _get_property(self, property_type: int) -> float:
-        """ Get module property value and request
+        """Get module property value and request
 
         :param property_type: Type of the requested property
         :type property_type: int
@@ -158,9 +153,10 @@ class Module:
 
         return self._properties[property_type].value
 
-    def update_property(self, property_type: int,
-                        property_value: float) -> None:
-        """ Update property value and time
+    def update_property(
+        self, property_type: int, property_value: float
+    ) -> None:
+        """Update property value and time
 
         :param property_type: Type of the updated property
         :type property_type: int
@@ -172,9 +168,10 @@ class Module:
         self._properties[property_type].value = property_value
         self._properties[property_type].last_update_time = time.time()
 
-    def __request_property(self, destination_id: int,
-                           property_type: int) -> None:
-        """ Generate message for request property
+    def __request_property(
+        self, destination_id: int, property_type: int
+    ) -> None:
+        """Generate message for request property
 
         :param destination_id: Id of the destination module
         :type destination_id: int
@@ -184,7 +181,9 @@ class Module:
         """
         self._properties[property_type].last_update_time = time.time()
         req_prop_msg = parse_message(
-            0x03, 0, destination_id,
-            (property_type, None, self.prop_samp_freq, None)
+            0x03,
+            0,
+            destination_id,
+            (property_type, None, self.prop_samp_freq, None),
         )
         self._conn.send(req_prop_msg)

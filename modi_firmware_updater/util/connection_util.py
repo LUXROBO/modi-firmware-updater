@@ -10,7 +10,6 @@ from serial.tools.list_ports_common import ListPortInfo
 
 
 class ConnTask(ABC):
-
     def __init__(self, verbose=False):
         self._bus = None
         self.verbose = verbose
@@ -50,27 +49,28 @@ class ConnTask(ABC):
         """Wait decorator
         Make sure this is attached to inherited send method
         """
+
         def decorator(self, pkt: str) -> None:
             init_time = time.perf_counter()
             func(self, pkt)
             while time.perf_counter() - init_time < 0.04:
                 pass
+
         return decorator
 
 
 class SerTask(ConnTask):
-
     def __init__(self, verbose=False, port=None):
         print("Initiating serial connection...")
         super().__init__(verbose)
         self.__port = port
-        self.__json_buffer = b''
+        self.__json_buffer = b""
 
     #
     # Inherited Methods
     #
     def open_conn(self) -> None:
-        """ Open serial port
+        """Open serial port
 
         :return: None
         """
@@ -80,8 +80,10 @@ class SerTask(ConnTask):
 
         if self.__port:
             if self.__port not in map(lambda info: info.device, modi_ports):
-                raise SerialException(f"{self.__port} is not connected "
-                                      f"to a MODI network module.")
+                raise SerialException(
+                    f"{self.__port} is not connected "
+                    f"to a MODI network module."
+                )
             else:
                 try:
                     self._bus = self.__init_serial(self.__port)
@@ -109,36 +111,36 @@ class SerTask(ConnTask):
         return ser
 
     def close_conn(self) -> None:
-        """ Close serial port
+        """Close serial port
 
         :return: None
         """
         self._bus.close()
 
     def recv(self) -> Optional[str]:
-        """ Read serial message and put message to serial read queue
+        """Read serial message and put message to serial read queue
 
         :return: str
         """
         buf_temp = self._bus.read_all()
         self.__json_buffer += buf_temp
-        idx = self.__json_buffer.find(b'{')
+        idx = self.__json_buffer.find(b"{")
         if idx < 0:
-            self.__json_buffer = b''
+            self.__json_buffer = b""
             return None
         self.__json_buffer = self.__json_buffer[idx:]
-        idx = self.__json_buffer.find(b'}')
+        idx = self.__json_buffer.find(b"}")
         if idx < 0:
             return None
-        json_pkt = self.__json_buffer[:idx + 1].decode('utf8')
-        self.__json_buffer = self.__json_buffer[idx + 1:]
+        json_pkt = self.__json_buffer[: idx + 1].decode("utf8")
+        self.__json_buffer = self.__json_buffer[idx + 1 :]
         if self.verbose:
-            print(f'recv: {json_pkt}')
+            print(f"recv: {json_pkt}")
         return json_pkt
 
     @ConnTask.wait
     def send(self, pkt: str, verbose=False) -> None:
-        """ Send json pkt
+        """Send json pkt
 
         :param pkt: Json pkt to send
         :type pkt: str
@@ -146,12 +148,12 @@ class SerTask(ConnTask):
         :type verbose: bool
         :return: None
         """
-        self._bus.write(pkt.encode('utf8'))
+        self._bus.write(pkt.encode("utf8"))
         if self.verbose or verbose:
-            print(f'send: {pkt}')
+            print(f"send: {pkt}")
 
     def send_nowait(self, pkt: str, verbose=False) -> None:
-        """ Send json pkt
+        """Send json pkt
 
         :param pkt: Json pkt to send
         :type pkt: str
@@ -159,9 +161,9 @@ class SerTask(ConnTask):
         :type verbose: bool
         :return: None
         """
-        self._bus.write(pkt.encode('utf8'))
+        self._bus.write(pkt.encode("utf8"))
         if self.verbose or verbose:
-            print(f'send: {pkt}')
+            print(f"send: {pkt}")
 
 
 def list_modi_ports() -> List[ListPortInfo]:
@@ -173,13 +175,14 @@ def list_modi_ports() -> List[ListPortInfo]:
     def __is_modi_port(port):
         return (
             (port.manufacturer and port.manufacturer.upper() == "LUXROBO")
-            or port.product in (
+            or port.product
+            in (
                 "MODI Network Module",
                 "MODI Network Module(BootLoader)",
                 "STM32 Virtual ComPort",
                 "STMicroelectronics Virtual COM Port",
             )
-            or (port.vid == 0x2fde and port.pid == 0x2)
+            or (port.vid == 0x2FDE and port.pid == 0x2)
             or (port.vid == 0x483 and port.pid == 0x5740)
         )
 

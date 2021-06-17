@@ -1,4 +1,3 @@
-
 import io
 import json
 import sys
@@ -47,7 +46,7 @@ class STM32FirmwareUpdater:
     ERASE_COMPLETE = 7
 
     def __init__(
-        self, is_os_update=True, target_ids=(0xFFF, ), conn_type='ser'
+        self, is_os_update=True, target_ids=(0xFFF,), conn_type="ser"
     ):
         self.conn_type = conn_type
         self.update_network_base = False
@@ -73,7 +72,7 @@ class STM32FirmwareUpdater:
         try:
             self.close()
         except serial.SerialException:
-            print('Magic del is called with an exception')
+            print("Magic del is called with an exception")
 
     def set_ui(self, ui):
         self.ui = ui
@@ -86,7 +85,7 @@ class STM32FirmwareUpdater:
     def __assign_network_id(self, sid, data):
         module_uuid = unpack_data(data, (6, 1))[0]
         module_type = get_module_type_from_uuid(module_uuid)
-        if module_type == 'network':
+        if module_type == "network":
             self.network_id = sid
 
     def update_module_firmware(self, update_network_base=False):
@@ -99,8 +98,8 @@ class STM32FirmwareUpdater:
                 if timeout <= 0:
                     if not self.update_in_progress:
                         print(
-                            'Could not retrieve network id, '
-                            'broadcast id will be used instead.'
+                            "Could not retrieve network id, "
+                            "broadcast id will be used instead."
                         )
                     self.network_id = 0xFFF
                     r_mode = 2
@@ -115,8 +114,8 @@ class STM32FirmwareUpdater:
             """
             if self.network_id != 0xFFF:
                 print(
-                    f'Sending a request to update firmware of network '
-                    f'({self.network_id})'
+                    f"Sending a request to update firmware of network "
+                    f"({self.network_id})"
                 )
             if not self.update_in_progress:
                 self.request_to_update_firmware(
@@ -150,23 +149,23 @@ class STM32FirmwareUpdater:
                     break
 
     def reinitialize_serial_connection(self, reinit_mode=1):
-        if self.ui and self.update_network_base and reinit_mode == 2:
-            modi_num = len(list_modi_ports())
-            self.ui.stream.thread_signal.connect(self.ui.popup)
-            self.ui.stream.thread_signal.emit(self)
-            th.Thread(
-                target=self._reconnect_serial_connection,
-                args=(modi_num,),
-                daemon=True
-            ).start()
-        else:
-            self.__reinitialize_serial_connection()
+        # if self.ui and self.update_network_base and reinit_mode == 2:
+        #     modi_num = len(list_modi_ports())
+        #     self.ui.stream.thread_signal.connect(self.ui.popup)
+        #     self.ui.stream.thread_signal.emit(self)
+        #     th.Thread(
+        #         target=self._reconnect_serial_connection,
+        #         args=(modi_num,),
+        #         daemon=True
+        #     ).start()
+        # else:
+        self.__reinitialize_serial_connection()
 
     def __reinitialize_serial_connection(self):
-        print('Temporally disconnecting the serial connection...')
+        print("Temporally disconnecting the serial connection...")
         self.close()
         time.sleep(2)
-        print('Re-init serial connection for the update, in 2 seconds...')
+        print("Re-init serial connection for the update, in 2 seconds...")
         self.__conn = self.__open_conn()
         self.__conn.open_conn()
         self.__running = True
@@ -179,7 +178,7 @@ class STM32FirmwareUpdater:
         self.update_in_progress = False
 
         if not update_in_progress:
-            print('Make sure you have connected module(s) to update')
+            print("Make sure you have connected module(s) to update")
             print("Resetting firmware updater's state")
             self.modules_to_update = []
             self.modules_updated = []
@@ -199,7 +198,7 @@ class STM32FirmwareUpdater:
                 module_id, Module.UPDATE_FIRMWARE, Module.PNP_OFF
             )
             self.__conn.send_nowait(firmware_update_message)
-        print('Firmware update has been requested')
+        print("Firmware update has been requested")
 
     def check_to_update_firmware(self, module_id: int) -> None:
         firmware_update_ready_message = self.__set_module_state(
@@ -218,8 +217,10 @@ class STM32FirmwareUpdater:
             if module_id == curr_module_id:
                 return
 
-        print(f"Adding {module_type} ({module_id}) to waiting list..."
-              f"{' ' * 60}")
+        print(
+            f"Adding {module_type} ({module_id}) to waiting list..."
+            f"{' ' * 60}"
+        )
 
         # Add the module to the waiting list
         module_elem = module_id, module_type
@@ -236,8 +237,9 @@ class STM32FirmwareUpdater:
         updater_thread.daemon = True
         updater_thread.start()
 
-    def update_response(self, response: bool,
-                        is_error_response: bool = False) -> None:
+    def update_response(
+        self, response: bool, is_error_response: bool = False
+    ) -> None:
         if not is_error_response:
             self.response_flag = response
         else:
@@ -248,30 +250,23 @@ class STM32FirmwareUpdater:
         self.modules_updated.append((module_id, module_type))
 
         # Init base root_path, utilizing local binary files
-        root_path = (
-            path.join(
-                path.dirname(__file__),
-                '..', 'assets', 'firmware', 'stm32'
-            )
+        root_path = path.join(
+            path.dirname(__file__), "..", "assets", "firmware", "stm32"
         )
 
         if self.__is_os_update:
             if self.ui:
                 if self.update_network_base:
-                    root_path = (
-                        'https://download.luxrobo.com/modi-network-os'
-                    )
-                    zip_path = root_path + '/network.zip'
-                    bin_path = 'network.bin'
+                    root_path = "https://download.luxrobo.com/modi-network-os"
+                    zip_path = root_path + "/network.zip"
+                    bin_path = "network.bin"
                 else:
-                    root_path = (
-                        'https://download.luxrobo.com/modi-skeleton'
-                    )
-                    zip_path = root_path + '/skeleton.zip'
+                    root_path = "https://download.luxrobo.com/modi-skeleton"
+                    zip_path = root_path + "/skeleton.zip"
                     bin_path = (
-                        path.join(f'{module_type.lower()}/Base_module.bin')
-                        if module_type != 'env' else
-                        path.join('environment/Base_module.bin')
+                        path.join(f"{module_type.lower()}/Base_module.bin")
+                        if module_type != "env"
+                        else path.join("environment/Base_module.bin")
                     )
 
                 try:
@@ -282,12 +277,12 @@ class STM32FirmwareUpdater:
                         "Failed to download firmware. Check your internet."
                     )
                 zip_content = zipfile.ZipFile(
-                    io.BytesIO(download_response), 'r'
+                    io.BytesIO(download_response), "r"
                 )
                 bin_buffer = zip_content.read(bin_path)
             else:
-                bin_path = path.join(root_path, f'{module_type.lower()}.bin')
-                with open(bin_path, 'rb') as bin_file:
+                bin_path = path.join(root_path, f"{module_type.lower()}.bin")
+                with open(bin_path, "rb") as bin_file:
                     bin_buffer = bin_file.read()
 
             # Init metadata of the bytes loaded
@@ -335,7 +330,8 @@ class STM32FirmwareUpdater:
                 print(
                     f"\rUpdating {module_type} ({module_id}) "
                     f"{self.__progress_bar(page_begin, bin_end)} "
-                    f"{progress}%", end=''
+                    f"{progress}%",
+                    end="",
                 )
 
                 page_end = page_begin + page_size
@@ -347,9 +343,11 @@ class STM32FirmwareUpdater:
 
                 # Erase page (send erase request and receive its response)
                 erase_page_success = self.send_firmware_command(
-                    oper_type="erase", module_id=module_id, crc_val=0,
+                    oper_type="erase",
+                    module_id=module_id,
+                    crc_val=0,
                     dest_addr=flash_memory_addr,
-                    page_addr=page_begin + page_offset
+                    page_addr=page_begin + page_offset,
                 )
                 if not erase_page_success:
                     page_begin -= page_size
@@ -360,20 +358,22 @@ class STM32FirmwareUpdater:
                     if page_begin + curr_ptr >= bin_size:
                         break
 
-                    curr_data = curr_page[curr_ptr:curr_ptr + 8]
+                    curr_data = curr_page[curr_ptr : curr_ptr + 8]
                     checksum = self.send_firmware_data(
                         module_id,
                         seq_num=curr_ptr // 8,
                         bin_data=curr_data,
-                        crc_val=checksum
+                        crc_val=checksum,
                     )
                     self.__delay(0.002)
 
                 # CRC on current page (send CRC request / receive CRC response)
                 crc_page_success = self.send_firmware_command(
-                    oper_type="crc", module_id=module_id, crc_val=checksum,
+                    oper_type="crc",
+                    module_id=module_id,
+                    crc_val=checksum,
                     dest_addr=flash_memory_addr,
-                    page_addr=page_begin + page_offset
+                    page_addr=page_begin + page_offset,
                 )
                 if not crc_page_success:
                     page_begin -= page_size
@@ -384,25 +384,25 @@ class STM32FirmwareUpdater:
         )
 
         # Get version info from version_path, using appropriate methods
-        version_info, version_file = None, 'version.txt'
+        version_info, version_file = None, "version.txt"
         if self.ui:
-            version_path = root_path + '/' + version_file
+            version_path = root_path + "/" + version_file
             for line in ur.urlopen(version_path, timeout=5):
-                version_info = line.decode('utf-8').lstrip('v').rstrip('\n')
+                version_info = line.decode("utf-8").lstrip("v").rstrip("\n")
         else:
             if self.update_network_base:
-                version_file = 'base_' + version_file
-            version_path = root_path + '/' + version_file
+                version_file = "base_" + version_file
+            version_path = root_path + "/" + version_file
             with open(version_path) as version_file:
-                version_info = version_file.readline().lstrip('v').rstrip('\n')
-        version_digits = [int(digit) for digit in version_info.split('.')]
+                version_info = version_file.readline().lstrip("v").rstrip("\n")
+        version_digits = [int(digit) for digit in version_info.split(".")]
         """ Version number is formed by concatenating all three version bits
             e.g. 2.2.4 -> 010 00010 00000100 -> 0100 0010 0000 0100
         """
         version = (
-            version_digits[0] << 13 |
-            version_digits[1] << 8 |
-            version_digits[2]
+            version_digits[0] << 13
+            | version_digits[1] << 8
+            | version_digits[2]
         )
 
         # Set end-flash data to be sent at the end of the firmware update
@@ -412,11 +412,11 @@ class STM32FirmwareUpdater:
         end_flash_data[7] = (version >> 8) & 0xFF
         self.send_end_flash_data(module_type, module_id, end_flash_data)
         print(
-            f'Version info (v{version_info}) has been written to its firmware!'
+            f"Version info (v{version_info}) has been written to its firmware!"
         )
 
         # Firmware update flag down, resetting used flags
-        print(f'Firmware update is done for {module_type} ({module_id})')
+        print(f"Firmware update is done for {module_type} ({module_id})")
         self.reset_state(update_in_progress=True)
 
         if self.modules_to_update:
@@ -442,8 +442,8 @@ class STM32FirmwareUpdater:
             if self.ui:
                 if self.update_network_base:
                     self.ui.update_stm32_modules.setStyleSheet(
-                        f'border-image: url({self.ui.active_path});'
-                        'font-size: 16px'
+                        f"border-image: url({self.ui.active_path});"
+                        "font-size: 16px"
                     )
                     self.ui.update_stm32_modules.setEnabled(True)
                     if self.ui.is_english:
@@ -456,8 +456,8 @@ class STM32FirmwareUpdater:
                         )
                 else:
                     self.ui.update_network_stm32.setStyleSheet(
-                        f'border-image: url({self.ui.active_path});'
-                        'font-size: 16px'
+                        f"border-image: url({self.ui.active_path});"
+                        "font-size: 16px"
                     )
                     self.ui.update_network_stm32.setEnabled(True)
                     if self.ui.is_english:
@@ -465,12 +465,10 @@ class STM32FirmwareUpdater:
                             "Update STM32 Modules."
                         )
                     else:
-                        self.ui.update_stm32_modules.setText(
-                            "모듈 초기화"
-                        )
+                        self.ui.update_stm32_modules.setText("모듈 초기화")
                 self.ui.update_network_esp32.setStyleSheet(
-                    f'border-image: url({self.ui.active_path});'
-                    'font-size: 16px'
+                    f"border-image: url({self.ui.active_path});"
+                    "font-size: 16px"
                 )
                 self.ui.update_network_esp32.setEnabled(True)
 
@@ -482,8 +480,9 @@ class STM32FirmwareUpdater:
         return
 
     @staticmethod
-    def __set_network_state(destination_id: int, module_state: int,
-                            pnp_state: int) -> str:
+    def __set_network_state(
+        destination_id: int, module_state: int, pnp_state: int
+    ) -> str:
         message = dict()
 
         message["c"] = 0xA4
@@ -500,8 +499,9 @@ class STM32FirmwareUpdater:
         return json.dumps(message, separators=(",", ":"))
 
     @staticmethod
-    def __set_module_state(destination_id: int, module_state: int,
-                           pnp_state: int) -> str:
+    def __set_module_state(
+        destination_id: int, module_state: int, pnp_state: int
+    ) -> str:
         message = dict()
 
         message["c"] = 0x09
@@ -519,16 +519,19 @@ class STM32FirmwareUpdater:
 
     # TODO: Use retry decorator here
     @retry(Exception)
-    def send_end_flash_data(self, module_type: str, module_id: int,
-                            end_flash_data: bytearray) -> None:
+    def send_end_flash_data(
+        self, module_type: str, module_id: int, end_flash_data: bytearray
+    ) -> None:
         # Write end-flash data until success
         end_flash_success = False
         while not end_flash_success:
 
             # Erase page (send erase request and receive erase response)
             erase_page_success = self.send_firmware_command(
-                oper_type="erase", module_id=module_id, crc_val=0,
-                dest_addr=0x0801F800
+                oper_type="erase",
+                module_id=module_id,
+                crc_val=0,
+                dest_addr=0x0801F800,
             )
             # TODO: Remove magic number of dest_addr above, try using flash_mem
             if not erase_page_success:
@@ -541,17 +544,25 @@ class STM32FirmwareUpdater:
 
             # CRC on current page (send CRC request and receive CRC response)
             crc_page_success = self.send_firmware_command(
-                oper_type="crc", module_id=module_id, crc_val=checksum,
-                dest_addr=0x0801F800
+                oper_type="crc",
+                module_id=module_id,
+                crc_val=checksum,
+                dest_addr=0x0801F800,
             )
             if not crc_page_success:
                 continue
 
             end_flash_success = True
-        # print(f"End flash is written for {module_type} ({module_id})")
+        print(f"End flash is written for {module_type} ({module_id})")
 
-    def get_firmware_command(self, module_id: int, rot_stype: int,
-                             rot_scmd: int, crc32: int, page_addr: int) -> str:
+    def get_firmware_command(
+        self,
+        module_id: int,
+        rot_stype: int,
+        rot_scmd: int,
+        crc32: int,
+        page_addr: int,
+    ) -> str:
         message = dict()
         message["c"] = 0x0D
 
@@ -573,15 +584,16 @@ class STM32FirmwareUpdater:
             crc32 >>= 8
             crc32_and_page_addr_data[4 + i] = page_addr & 0xFF
             page_addr >>= 8
-        message["b"] = b64encode(
-            bytes(crc32_and_page_addr_data)
-        ).decode("utf-8")
+        message["b"] = b64encode(bytes(crc32_and_page_addr_data)).decode(
+            "utf-8"
+        )
         message["l"] = 8
 
         return json.dumps(message, separators=(",", ":"))
 
-    def get_firmware_data(self, module_id: int, seq_num: int,
-                          bin_data: bytes) -> str:
+    def get_firmware_data(
+        self, module_id: int, seq_num: int, bin_data: bytes
+    ) -> str:
         message = dict()
         message["c"] = 0x0B
         message["s"] = seq_num
@@ -593,7 +605,7 @@ class STM32FirmwareUpdater:
         return json.dumps(message, separators=(",", ":"))
 
     def calc_crc32(self, data: bytes, crc: int) -> int:
-        crc ^= int.from_bytes(data, byteorder='little', signed=False)
+        crc ^= int.from_bytes(data, byteorder="little", signed=False)
 
         for _ in range(32):
             if crc & (1 << 31) != 0:
@@ -609,9 +621,14 @@ class STM32FirmwareUpdater:
         checksum = self.calc_crc32(data[4:], checksum)
         return checksum
 
-    def send_firmware_command(self, oper_type: str, module_id: int,
-                              crc_val: int, dest_addr: int,
-                              page_addr: int = 0) -> bool:
+    def send_firmware_command(
+        self,
+        oper_type: str,
+        module_id: int,
+        crc_val: int,
+        dest_addr: int,
+        page_addr: int = 0,
+    ) -> bool:
         rot_scmd = 2 if oper_type == "erase" else 1
 
         # Send firmware command request
@@ -622,9 +639,12 @@ class STM32FirmwareUpdater:
 
         return self.receive_command_response()
 
-    def receive_command_response(self, response_delay: float = 0.001,
-                                 response_timeout: float = 5,
-                                 max_response_error_count: int = 75) -> bool:
+    def receive_command_response(
+        self,
+        response_delay: float = 0.001,
+        response_timeout: float = 5,
+        max_response_error_count: int = 75,
+    ) -> bool:
         # Receive firmware command response
         response_wait_time = 0
         while not self.response_flag:
@@ -647,8 +667,9 @@ class STM32FirmwareUpdater:
         self.response_flag = False
         return True
 
-    def send_firmware_data(self, module_id: int, seq_num: int, bin_data: bytes,
-                           crc_val: int) -> int:
+    def send_firmware_data(
+        self, module_id: int, seq_num: int, bin_data: bytes, crc_val: int
+    ) -> int:
         # Send firmware data
         data_message = self.get_firmware_data(
             module_id, seq_num=seq_num, bin_data=bin_data
@@ -683,7 +704,7 @@ class STM32FirmwareUpdater:
         command = {
             0x05: self.__assign_network_id,
             0x0A: self.__update_warning,
-            0x0C: self.__update_firmware_state
+            0x0C: self.__update_firmware_state,
         }.get(ins)
 
         if command:
