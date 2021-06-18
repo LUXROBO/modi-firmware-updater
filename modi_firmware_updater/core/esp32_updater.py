@@ -1,18 +1,16 @@
-
 import io
+import json
+import pathlib
 import sys
 import time
-import json
-import serial
-import zipfile
-import pathlib
-
 import urllib.request as ur
-
-from os import path
+import zipfile
+from base64 import b64decode, b64encode
 from io import open
-from base64 import b64encode, b64decode
+from os import path
 from urllib.error import URLError
+
+import serial
 
 from modi_firmware_updater.util.connection_util import list_modi_ports
 
@@ -50,10 +48,13 @@ class ESP32FirmwareUpdater(serial.Serial):
         super().__init__(modi_ports[0].device, timeout=0.1, baudrate=921600)
         print(f"Connecting to MODI network module at {modi_ports[0].device}")
 
-        self.__address = [0x1000, 0x8000, 0XD000, 0x10000, 0xD0000]
+        self.__address = [0x1000, 0x8000, 0xD000, 0x10000, 0xD0000]
         self.file_path = [
-            'bootloader.bin', 'partitions.bin', 'ota_data_initial.bin',
-            'modi_ota_factory.bin', 'esp32.bin'
+            "bootloader.bin",
+            "partitions.bin",
+            "ota_data_initial.bin",
+            "modi_ota_factory.bin",
+            "esp32.bin",
         ]
         self.id = None
         self.version = None
@@ -66,7 +67,7 @@ class ESP32FirmwareUpdater(serial.Serial):
         self.ui = ui
 
     def update_firmware(self, force=False):
-        print('Turning interpreter off...')
+        print("Turning interpreter off...")
         self.write(b'{"c":160,"s":0,"d":18,"b":"AAMAAAAA","l":6}')
 
         self.update_in_progress = True
@@ -78,8 +79,9 @@ class ESP32FirmwareUpdater(serial.Serial):
             if not force and not self.ui:
                 response = input(
                     f"ESP version already up to date (v{self.version})."
-                    f" Do you still want to proceed? [y/n]: ")
-                if 'y' not in response:
+                    f" Do you still want to proceed? [y/n]: "
+                )
+                if "y" not in response:
                     return
 
         print(f"Updating v{self.version} to v{self.__version_to_update}")
@@ -107,21 +109,17 @@ class ESP32FirmwareUpdater(serial.Serial):
 
         if self.ui:
             self.ui.update_stm32_modules.setStyleSheet(
-                f'border-image: url({self.ui.active_path}); font-size: 16px'
+                f"border-image: url({self.ui.active_path}); font-size: 16px"
             )
             self.ui.update_stm32_modules.setEnabled(True)
             self.ui.update_network_stm32.setStyleSheet(
-                f'border-image: url({self.ui.active_path}); font-size: 16px'
+                f"border-image: url({self.ui.active_path}); font-size: 16px"
             )
             self.ui.update_network_stm32.setEnabled(True)
             if self.ui.is_english:
-                self.ui.update_network_esp32.setText(
-                    "Update Network ESP32"
-                )
+                self.ui.update_network_esp32.setText("Update Network ESP32")
             else:
-                self.ui.update_network_esp32.setText(
-                    "네트워크 모듈 업데이트"
-                )
+                self.ui.update_network_esp32.setText("네트워크 모듈 업데이트")
 
     def __device_ready(self):
         print("Redirecting connection to esp device...")
@@ -129,17 +127,18 @@ class ESP32FirmwareUpdater(serial.Serial):
 
     def __device_sync(self):
         print("Syncing the esp device...")
-        sync_pkt = self.__parse_pkt([
-            0x0, self.DEVICE_SYNC, 0x24, 0, 0, 0, 0, 0, 0x7, 0x7, 0x12, 0x20
-        ] + 32 * [0x55])
+        sync_pkt = self.__parse_pkt(
+            [0x0, self.DEVICE_SYNC, 0x24, 0, 0, 0, 0, 0, 0x7, 0x7, 0x12, 0x20]
+            + 32 * [0x55]
+        )
         self.__send_pkt(sync_pkt, timeout=10, continuous=True)
         print("Sync Complete")
 
     def __flash_attach(self):
         print("Attaching flash to esp device..")
-        attach_pkt = self.__parse_pkt([
-            0x0, self.SPI_ATTACH_REQ, 0x8
-        ] + 13 * [0])
+        attach_pkt = self.__parse_pkt(
+            [0x0, self.SPI_ATTACH_REQ, 0x8] + 13 * [0]
+        )
         self.__send_pkt(attach_pkt, timeout=10)
         print("Flash attach Complete")
 
@@ -147,25 +146,30 @@ class ESP32FirmwareUpdater(serial.Serial):
         print("Setting esp flash parameter...")
         param_data = [0] * 32
         fl_id, total_size, block_size, sector_size, page_size, status_mask = (
-            0, 2 * 1024 * 1024, 64 * 1024, 4 * 1024, 256, 0xFFFF
+            0,
+            2 * 1024 * 1024,
+            64 * 1024,
+            4 * 1024,
+            256,
+            0xFFFF,
         )
         param_data[1] = self.SPI_FLASH_SET
         param_data[2] = 0x18
-        param_data[8:12] = int.to_bytes(fl_id, length=4, byteorder='little')
+        param_data[8:12] = int.to_bytes(fl_id, length=4, byteorder="little")
         param_data[12:16] = int.to_bytes(
-            total_size, length=4, byteorder='little'
+            total_size, length=4, byteorder="little"
         )
         param_data[16:20] = int.to_bytes(
-            block_size, length=4, byteorder='little'
+            block_size, length=4, byteorder="little"
         )
         param_data[20:24] = int.to_bytes(
-            sector_size, length=4, byteorder='little'
+            sector_size, length=4, byteorder="little"
         )
         param_data[24:28] = int.to_bytes(
-            page_size, length=4, byteorder='little'
+            page_size, length=4, byteorder="little"
         )
         param_data[28:32] = int.to_bytes(
-            status_mask, length=4, byteorder='little'
+            status_mask, length=4, byteorder="little"
         )
         param_pkt = self.__parse_pkt(param_data)
         self.__send_pkt(param_pkt, timeout=10)
@@ -174,8 +178,8 @@ class ESP32FirmwareUpdater(serial.Serial):
     @staticmethod
     def __parse_pkt(data):
         pkt = bytes(data)
-        pkt = pkt.replace(b'\xdb', b'\xdb\xdd').replace(b'\xc0', b'\xdb\xdc')
-        pkt = b'\xc0' + pkt + b'\xc0'
+        pkt = pkt.replace(b"\xdb", b"\xdb\xdd").replace(b"\xc0", b"\xdb\xdc")
+        pkt = b"\xc0" + pkt + b"\xc0"
         return pkt
 
     @retry(Exception)
@@ -206,22 +210,22 @@ class ESP32FirmwareUpdater(serial.Serial):
             raise Exception("Timeout Expired!")
 
     def __read_slip(self):
-        slip_pkt = b''
-        while slip_pkt != b'\xc0':
+        slip_pkt = b""
+        while slip_pkt != b"\xc0":
             slip_pkt = self.read()
-            if slip_pkt == b'':
-                return b''
-        slip_pkt += self.read_until(b'\xc0')
+            if slip_pkt == b"":
+                return b""
+        slip_pkt += self.read_until(b"\xc0")
         return slip_pkt
 
     def __read_json(self):
-        json_pkt = b''
-        while json_pkt != b'{':
+        json_pkt = b""
+        while json_pkt != b"{":
             json_pkt = self.read()
-            if json_pkt == b'':
-                return ''
+            if json_pkt == b"":
+                return ""
             time.sleep(0.1)
-        json_pkt += self.read_until(b'}')
+        json_pkt += self.read_until(b"}")
         return json_pkt
 
     def __wait_for_json(self):
@@ -233,65 +237,72 @@ class ESP32FirmwareUpdater(serial.Serial):
 
     def __get_esp_id(self):
         json_msg = json.loads(self.__wait_for_json())
-        while json_msg['c'] != 0:
+        while json_msg["c"] != 0:
             json_msg = json.loads(self.__wait_for_json())
-        return json_msg['s']
+        return json_msg["s"]
 
     def __get_esp_version(self):
         get_version_pkt = b'{"c":160,"s":25,"d":4095,"b":"AAAAAAAAAA==","l":8}'
         self.write(get_version_pkt)
         json_msg = json.loads(self.__wait_for_json())
         init_time = time.time()
-        while json_msg['c'] != 0xA1:
+        while json_msg["c"] != 0xA1:
             self.write(get_version_pkt)
             json_msg = json.loads(self.__wait_for_json())
             if time.time() - init_time > 1:
                 return None
-        ver = b64decode(json_msg['b']).lstrip(b'\x00')
-        return ver.decode('ascii')
+        ver = b64decode(json_msg["b"]).lstrip(b"\x00")
+        return ver.decode("ascii")
 
     def __set_esp_version(self, version_text: str):
         print(f"Writing version info (v{version_text})")
-        version_byte = version_text.encode('ascii')
-        version_byte = b'\x00' * (8 - len(version_byte)) + version_byte
-        version_text = b64encode(version_byte).decode('utf8')
-        version_msg = '{' + f'"c":160,"s":24,"d":4095,' \
-                            f'"b":"{version_text}","l":8' + '}'
-        version_msg_enc = version_msg.encode('utf8')
+        version_byte = version_text.encode("ascii")
+        version_byte = b"\x00" * (8 - len(version_byte)) + version_byte
+        version_text = b64encode(version_byte).decode("utf8")
+        version_msg = (
+            "{" + f'"c":160,"s":24,"d":4095,'
+            f'"b":"{version_text}","l":8' + "}"
+        )
+        version_msg_enc = version_msg.encode("utf8")
         self.write(version_msg_enc)
 
-        while json.loads(self.__wait_for_json())['c'] != 0xA1:
+        while json.loads(self.__wait_for_json())["c"] != 0xA1:
             time.sleep(0.5)
             self.__boot_to_app()
-            self.write(version_msg.encode('utf8'))
+            self.write(version_msg.encode("utf8"))
         print("The version info has been set!!")
 
     def __compose_binary_firmware(self):
-        binary_firmware = b''
+        binary_firmware = b""
         for i, bin_path in enumerate(self.file_path):
             if self.ui:
                 if i == 2:
-                    if sys.platform.startswith('win'):
-                        root_path = (
-                            pathlib.PurePosixPath(
-                                pathlib.PurePath(__file__),
-                                '..', '..', 'assets', 'firmware', 'esp32'
-                            )
+                    if sys.platform.startswith("win"):
+                        root_path = pathlib.PurePosixPath(
+                            pathlib.PurePath(__file__),
+                            "..",
+                            "..",
+                            "assets",
+                            "firmware",
+                            "esp32",
                         )
                     else:
                         root_path = path.join(
                             path.dirname(__file__),
-                            '..', 'assets', 'firmware', 'esp32'
+                            "..",
+                            "assets",
+                            "firmware",
+                            "esp32",
                         )
                 elif i == 3:
                     root_path = (
-                        'https://download.luxrobo.com/modi-ota-firmware/'
-                        'ota.zip'
+                        "https://download.luxrobo.com/modi-ota-firmware/"
+                        "ota.zip"
                     )
                 else:
                     root_path = (
-                        'https://download.luxrobo.com/modi-esp32-firmware/'
-                        'esp.zip'
+                        "https://download.luxrobo.com/modi-esp32-firmware/"
+                        "esp.zip"
                     )
 
                 if i != 2:
@@ -300,14 +311,14 @@ class ESP32FirmwareUpdater(serial.Serial):
                             download_response = conn.read()
                     except URLError:
                         raise URLError(
-                            'Failed to download firmware. Check your internet.'
+                            "Failed to download firmware. Check your internet."
                         )
                     zip_content = zipfile.ZipFile(
-                        io.BytesIO(download_response), 'r'
+                        io.BytesIO(download_response), "r"
                     )
                     bin_data = zip_content.read(bin_path)
                 elif i == 2:
-                    if sys.platform.startswith('win'):
+                    if sys.platform.startswith("win"):
                         firmware_path = pathlib.PurePosixPath(
                             root_path, bin_path
                         )
@@ -315,21 +326,20 @@ class ESP32FirmwareUpdater(serial.Serial):
                         firmware_path = path.join(root_path, bin_path)
                     if self.ui.installation:
                         firmware_path = path.dirname(__file__).replace(
-                            'core', bin_path
+                            "core", bin_path
                         )
-                    with open(firmware_path, 'rb') as bin_file:
+                    with open(firmware_path, "rb") as bin_file:
                         bin_data = bin_file.read()
             else:
                 root_path = path.join(
-                    path.dirname(__file__),
-                    '..', 'assets', 'firmware', 'esp32'
+                    path.dirname(__file__), "..", "assets", "firmware", "esp32"
                 )
                 firmware_path = path.join(root_path, bin_path)
-                with open(firmware_path, 'rb') as bin_file:
+                with open(firmware_path, "rb") as bin_file:
                     bin_data = bin_file.read()
             binary_firmware += bin_data
             if i < len(self.__address) - 1:
-                binary_firmware += b'\xFF' * (
+                binary_firmware += b"\xFF" * (
                     self.__address[i + 1] - self.__address[i] - len(bin_data)
                 )
         return binary_firmware
@@ -337,19 +347,18 @@ class ESP32FirmwareUpdater(serial.Serial):
     def __get_latest_version(self):
         if self.ui:
             version_path = (
-                'https://download.luxrobo.com/modi-esp32-firmware/version.txt'
+                "https://download.luxrobo.com/modi-esp32-firmware/version.txt"
             )
             version_info = None
             for line in ur.urlopen(version_path, timeout=5):
-                version_info = line.decode('utf-8').lstrip('v').rstrip('\n')
+                version_info = line.decode("utf-8").lstrip("v").rstrip("\n")
         else:
             root_path = path.join(
-                path.dirname(__file__),
-                '..', 'assets', 'firmware', 'esp32'
+                path.dirname(__file__), "..", "assets", "firmware", "esp32"
             )
-            version_path = path.join(root_path, 'esp_version.txt')
-            with open(version_path, 'r') as version_file:
-                version_info = version_file.readline().lstrip('v').rstrip('\n')
+            version_path = path.join(root_path, "esp_version.txt")
+            with open(version_path, "r") as version_file:
+                version_info = version_file.readline().lstrip("v").rstrip("\n")
         return version_info
 
     def __erase_chunk(self, size, offset):
@@ -357,16 +366,14 @@ class ESP32FirmwareUpdater(serial.Serial):
         erase_data = [0] * 24
         erase_data[1] = self.ESP_FLASH_BEGIN
         erase_data[2] = 0x10
-        erase_data[8:12] = int.to_bytes(size, length=4, byteorder='little')
+        erase_data[8:12] = int.to_bytes(size, length=4, byteorder="little")
         erase_data[12:16] = int.to_bytes(
-            num_blocks, length=4, byteorder='little'
+            num_blocks, length=4, byteorder="little"
         )
         erase_data[16:20] = int.to_bytes(
-            self.ESP_FLASH_BLOCK, length=4, byteorder='little'
+            self.ESP_FLASH_BLOCK, length=4, byteorder="little"
         )
-        erase_data[20:24] = int.to_bytes(
-            offset, length=4, byteorder='little'
-        )
+        erase_data[20:24] = int.to_bytes(offset, length=4, byteorder="little")
         erase_pkt = self.__parse_pkt(erase_data)
         self.__send_pkt(erase_pkt, timeout=10)
 
@@ -376,15 +383,15 @@ class ESP32FirmwareUpdater(serial.Serial):
         checksum = self.ESP_CHECKSUM_MAGIC
 
         block_data[1] = self.ESP_FLASH_DATA
-        block_data[2:4] = int.to_bytes(size + 16, length=2, byteorder='little')
-        block_data[8:12] = int.to_bytes(size, length=4, byteorder='little')
+        block_data[2:4] = int.to_bytes(size + 16, length=2, byteorder="little")
+        block_data[8:12] = int.to_bytes(size, length=4, byteorder="little")
         block_data[12:16] = int.to_bytes(
-            seq_block, length=4, byteorder='little'
+            seq_block, length=4, byteorder="little"
         )
         for i in range(size):
             block_data[24 + i] = data[i]
-            checksum ^= (0xFF & data[i])
-        block_data[4:8] = int.to_bytes(checksum, length=4, byteorder='little')
+            checksum ^= 0xFF & data[i]
+        block_data[4:8] = int.to_bytes(checksum, length=4, byteorder="little")
         block_pkt = self.__parse_pkt(block_data)
         self.__send_pkt(block_pkt)
 
@@ -393,11 +400,11 @@ class ESP32FirmwareUpdater(serial.Serial):
         num_blocks = len(binary_firmware) // self.ESP_FLASH_BLOCK + 1
         while binary_firmware:
             if self.ESP_FLASH_CHUNK < len(binary_firmware):
-                chunk_queue.append(binary_firmware[:self.ESP_FLASH_CHUNK])
-                binary_firmware = binary_firmware[self.ESP_FLASH_CHUNK:]
+                chunk_queue.append(binary_firmware[: self.ESP_FLASH_CHUNK])
+                binary_firmware = binary_firmware[self.ESP_FLASH_CHUNK :]
             else:
                 chunk_queue.append(binary_firmware[:])
-                binary_firmware = b''
+                binary_firmware = b""
 
         blocks_downloaded = 0
         print("Start uploading firmware data...")
@@ -426,11 +433,11 @@ class ESP32FirmwareUpdater(serial.Serial):
         block_queue = []
         while chunk:
             if self.ESP_FLASH_BLOCK < len(chunk):
-                block_queue.append(chunk[:self.ESP_FLASH_BLOCK])
-                chunk = chunk[self.ESP_FLASH_BLOCK:]
+                block_queue.append(chunk[: self.ESP_FLASH_BLOCK])
+                chunk = chunk[self.ESP_FLASH_BLOCK :]
             else:
                 block_queue.append(chunk[:])
-                chunk = b''
+                chunk = b""
         for seq, block in enumerate(block_queue):
             if manager:
                 manager.status = self.__progress_bar(curr_seq + seq, total_seq)
@@ -446,7 +453,7 @@ class ESP32FirmwareUpdater(serial.Serial):
                         f"({int((curr_seq+seq)/total_seq*100)}%)"
                     )
             print(
-                f'\r{self.__progress_bar(curr_seq + seq, total_seq)}', end=''
+                f"\r{self.__progress_bar(curr_seq + seq, total_seq)}", end=""
             )
             self.__write_flash_block(block, seq)
         return len(block_queue)
