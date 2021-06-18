@@ -4,4 +4,3 @@ pyinstaller
 pytest
 mypy
 flake8
-black
