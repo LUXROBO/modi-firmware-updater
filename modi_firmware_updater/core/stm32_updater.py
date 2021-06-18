@@ -266,12 +266,14 @@ class STM32FirmwareUpdater:
                     zip_path = root_path + "/network.zip"
                     bin_path = "network.bin"
                 else:
-                    root_path = "https://download.luxrobo.com/modi-skeleton"
+                    root_path = (
+                        "https://download.luxrobo.com/modi-skeleton-mobile"
+                    )
                     zip_path = root_path + "/skeleton.zip"
                     bin_path = (
-                        path.join(f"{module_type.lower()}/Base_module.bin")
+                        path.join(f"skeleton/{module_type.lower()}.bin")
                         if module_type != "env"
-                        else path.join("environment/Base_module.bin")
+                        else path.join("skeleton/environment.bin")
                     )
 
                 try:
