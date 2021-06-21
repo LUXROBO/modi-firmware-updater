@@ -182,6 +182,7 @@ def list_modi_ports() -> List[ListPortInfo]:
                 "STM32 Virtual ComPort",
                 "STMicroelectronics Virtual COM Port",
             )
+            or (port.vid == 0x2FDE and port.pid == 0x1)
             or (port.vid == 0x2FDE and port.pid == 0x2)
             or (port.vid == 0x483 and port.pid == 0x5740)
         )
