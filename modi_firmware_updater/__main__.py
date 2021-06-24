@@ -32,7 +32,9 @@ if __name__ == '__main__':
         # All commands should be defined here in advance
         opts, args = getopt(
             sys.argv[1:], 'nbm',
-            ['update_network', 'update_network_base', 'update_modules']
+            [
+                'update_network', 'update_network_base', 'update_modules',
+            ]
         )
     # Exit program if an invalid option has been entered
     except GetoptError as err:
