@@ -5,6 +5,13 @@ import sys
 import threading as th
 import time
 import traceback as tb
+import io
+import urllib.request as ur
+import zipfile
+from base64 import b64decode, b64encode
+from io import open
+from os import path
+from urllib.error import URLError
 
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
@@ -210,12 +217,12 @@ class Form(QDialog):
         self.ui.setWindowTitle("MODI Firmware Updater")
 
         # Redirect stdout to text browser (i.e. console in our UI)
-        self.stdout = StdoutRedirect()
-        self.stdout.start()
-        self.stdout.printOccur.connect(
-            lambda line: self.__append_text_line(line)
-        )
-        self.stdout.logger = self.logger
+        # self.stdout = StdoutRedirect()
+        # self.stdout.start()
+        # self.stdout.printOccur.connect(
+        #     lambda line: self.__append_text_line(line)
+        # )
+        # self.stdout.logger = self.logger
 
         # Set signal for thread communication
         self.stream = ThreadSignal()
@@ -259,6 +266,9 @@ class Form(QDialog):
         self.ui.language_frame_pressed_path = self.language_frame_pressed_path
         self.ui.stream = self.stream
         self.ui.popup = self._thread_signal_hook
+
+        # Check module firmware
+        self.check_module_firmware()
 
         self.translate_button_text()
         self.translate_button_text()
@@ -374,6 +384,180 @@ class Form(QDialog):
         for i, button in enumerate(self.buttons):
             button.setText(appropriate_translation[i])
 
+    def check_module_firmware(self):
+        # for test
+        stm32_path = path.join(
+            path.dirname(__file__), "assets", "firmware", "test", "stm32"
+        )
+        if not os.path.exists(stm32_path):
+            os.makedirs(stm32_path)
+
+        esp32_path = path.join(
+            path.dirname(__file__), "assets", "firmware", "test", "esp32"
+        )
+        if not os.path.exists(esp32_path):
+            os.makedirs(esp32_path)
+
+        self.check_skeleton_version()
+        self.check_network_base_version()
+        self.check_esp32_version()
+
+    def check_skeleton_version(self):
+        local_version_path = path.join(
+            path.dirname(__file__), "assets", "firmware", "stm32", "version.txt"
+        )
+        local_path = path.join(
+            path.dirname(__file__), "assets", "firmware", "test", "stm32"
+        )
+        last_version_path = "https://download.luxrobo.com/modi-skeleton/version.txt"
+        last_zip_path = "https://download.luxrobo.com/modi-skeleton/skeleton.zip"
+
+        try:
+            with open(local_version_path) as version_file:
+                local_version_info = version_file.readline().lstrip("v").rstrip("\n")
+
+            for line in ur.urlopen(last_version_path, timeout=5):
+                last_version_name = line.decode("utf-8")
+                last_version_info = last_version_name.lstrip("v").rstrip("\n")
+
+            if local_version_info != last_version_info:
+                # skeleton update
+                with ur.urlopen(last_zip_path, timeout=5) as conn:
+                    module_name = [
+                        "button",
+                        "dial",
+                        "display",
+                        "environment",
+                        "gyro",
+                        "ir",
+                        "led",
+                        "mic",
+                        "motor",
+                        "speaker",
+                        "ultrasonic"
+                    ]
+                    download_response = conn.read()
+                    zip_content = zipfile.ZipFile(
+                        io.BytesIO(download_response), "r"
+                    )
+
+                    for i, module in enumerate(module_name):
+                        src_path = module + "/Base_module.bin"
+                        bin_buffer = zip_content.read(src_path)
+                        
+                        if module == "environment":
+                            dest_path = path.join(local_path, "env" + ".bin")
+                        else:
+                            dest_path = path.join(local_path, module + ".bin")
+                        
+                        with open(dest_path, "wb") as data_file:
+                            data_file.write(bin_buffer)
+
+                # version update
+                with open(path.join(local_path, "version.txt"), "w") as data_file:
+                    data_file.write(last_version_name)
+        except URLError:
+            raise URLError(
+                "Failed to download firmware. Check your internet."
+            )
+
+    def check_network_base_version(self):
+        local_version_path = path.join(
+            path.dirname(__file__), "assets", "firmware", "stm32", "base_version.txt"
+        )
+        local_path = path.join(
+            path.dirname(__file__), "assets", "firmware", "test", "stm32"
+        )
+        last_version_path = "https://download.luxrobo.com/modi-network-os/version.txt"
+        last_zip_path = "https://download.luxrobo.com/modi-network-os/network.zip"
+
+        try:
+            with open(local_version_path) as version_file:
+                local_version_info = version_file.readline().lstrip("v").rstrip("\n")
+
+            for line in ur.urlopen(last_version_path, timeout=5):
+                last_version_name = line.decode("utf-8")
+                last_version_info = last_version_name.lstrip("v").rstrip("\n")
+
+            if local_version_info != last_version_info:
+                # network base update
+                with ur.urlopen(last_zip_path, timeout=5) as conn:
+                    download_response = conn.read()
+                    zip_content = zipfile.ZipFile(
+                        io.BytesIO(download_response), "r"
+                    )
+
+                    with open(path.join(local_path, "network.bin"), "wb") as data_file:
+                        data_file.write(zip_content.read("network.bin"))
+
+                # version update
+                with open(path.join(local_path, "base_version.txt"), "w") as data_file:
+                    data_file.write(last_version_name)
+
+        except URLError:
+            raise URLError(
+                "Failed to download firmware. Check your internet."
+            )
+
+    def check_esp32_version(self):
+        local_version_path = path.join(
+            path.dirname(__file__), "assets", "firmware", "esp32", "esp_version.txt"
+        )
+        local_path = path.join(
+            path.dirname(__file__), "assets", "firmware", "test", "esp32"
+        )
+        last_version_path = "https://download.luxrobo.com/modi-esp32-firmware/version.txt"
+        last_zip_path = [
+            "https://download.luxrobo.com/modi-ota-firmware/ota.zip",
+            "https://download.luxrobo.com/modi-esp32-firmware/esp.zip",
+        ]
+
+        try:
+            with open(local_version_path) as version_file:
+                local_version_info = version_file.readline().lstrip("v").rstrip("\n")
+
+            for line in ur.urlopen(last_version_path, timeout=5):
+                last_version_name = line.decode("utf-8")
+                last_version_info = last_version_name.lstrip("v").rstrip("\n")
+
+            if local_version_info != last_version_info:
+                # ota update
+                with ur.urlopen(last_zip_path[0], timeout=5) as conn:
+                    download_response = conn.read()
+                    zip_content = zipfile.ZipFile(
+                        io.BytesIO(download_response), "r"
+                    )
+
+                    with open(path.join(local_path, "modi_ota_factory.bin"), "wb") as data_file:
+                        data_file.write(zip_content.read("modi_ota_factory.bin"))
+
+                    with open(path.join(local_path, "ota_data_initial.bin"), "wb") as data_file:
+                        data_file.write(zip_content.read("ota_data_initial.bin"))
+
+                # bootloader, partitions, esp32 update
+                with ur.urlopen(last_zip_path[1], timeout=5) as conn:
+                    download_response = conn.read()
+                    zip_content = zipfile.ZipFile(
+                        io.BytesIO(download_response), "r"
+                    )
+
+                    with open(path.join(local_path, "bootloader.bin"), "wb") as data_file:
+                        data_file.write(zip_content.read("bootloader.bin"))
+
+                    with open(path.join(local_path, "partitions.bin"), "wb") as data_file:
+                        data_file.write(zip_content.read("partitions.bin"))
+
+                    with open(path.join(local_path, "esp32.bin"), "wb") as data_file:
+                        data_file.write(zip_content.read("esp32.bin"))
+
+                # version update
+                with open(path.join(local_path, "esp_version.txt"), "w") as data_file:
+                    data_file.write(last_version_name)
+
+        except URLError:
+            raise URLError(
+                "Failed to download firmware. Check your internet."
+            )
     #
     # Helper functions
     #
