@@ -27,7 +27,6 @@ def retry(exception_to_catch):
 
     return decorator
 
-
 class ESP32FirmwareUpdater(serial.Serial):
     DEVICE_READY = 0x2B
     DEVICE_SYNC = 0x08
@@ -45,8 +44,15 @@ class ESP32FirmwareUpdater(serial.Serial):
         modi_ports = list_modi_ports()
         if not modi_ports:
             raise serial.SerialException("No MODI port is connected")
-        super().__init__(modi_ports[0].device, timeout=0.1, baudrate=921600)
-        print(f"Connecting to MODI network module at {modi_ports[0].device}")
+        for modi_port in modi_ports:
+            try:
+                super().__init__(
+                    modi_port.device, timeout=0.1, baudrate=921600
+                )
+            except Exception:
+                print('Next network module')
+                continue
+        print(f"Connecting to MODI network module at {modi_port.device}")
 
         self.__address = [0x1000, 0x8000, 0xD000, 0x10000, 0xD0000]
         self.file_path = [
