@@ -27,6 +27,7 @@ def retry(exception_to_catch):
 
     return decorator
 
+
 class ESP32FirmwareUpdater(serial.Serial):
     DEVICE_READY = 0x2B
     DEVICE_SYNC = 0x08
