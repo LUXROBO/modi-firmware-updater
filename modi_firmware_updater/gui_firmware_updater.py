@@ -41,9 +41,9 @@ class StdoutRedirect(QObject):
     @staticmethod
     def __is_redundant_line(line):
         return (
-            line.startswith("\rUpdating")
-            or line.startswith("\rFirmware Upload: [")
-            or len(line) < 3
+            line.startswith("\rUpdating") or
+            line.startswith("\rFirmware Upload: [") or
+            len(line) < 3
         )
 
 

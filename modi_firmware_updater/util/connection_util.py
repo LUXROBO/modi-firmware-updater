@@ -186,8 +186,9 @@ def list_modi_ports() -> List[ListPortInfo]:
             or (port.vid == 0x2FDE and port.pid == 0x2)
             or (port.vid == 0x483 and port.pid == 0x5740)
         )
-
-    return [port for port in stl.comports() if __is_modi_port(port)]
+    modi_ports = [port for port in stl.comports() if __is_modi_port(port)]
+    print(f'{len(modi_ports)} number of network module(s) exist(s)')
+    return modi_ports
 
 
 def is_on_pi() -> bool:
