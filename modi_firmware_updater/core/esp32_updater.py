@@ -52,6 +52,8 @@ class ESP32FirmwareUpdater(serial.Serial):
             except Exception:
                 print('Next network module')
                 continue
+            else:
+                break
         print(f"Connecting to MODI network module at {modi_port.device}")
 
         self.__address = [0x1000, 0x8000, 0xD000, 0x10000, 0xD0000]
