@@ -200,6 +200,9 @@ class Form(QDialog):
         self.ui.update_network_esp32.setStyleSheet(
             f"border-image: url({self.active_path}); font-size: 16px"
         )
+        self.ui.update_network_esp32_interpreter.setStyleSheet(
+            f"border-image: url({self.active_path}); font-size: 16px"
+        )
         self.ui.update_stm32_modules.setStyleSheet(
             f"border-image: url({self.active_path}); font-size: 16px"
         )
@@ -217,12 +220,12 @@ class Form(QDialog):
         self.ui.setWindowTitle("MODI Firmware Updater")
 
         # Redirect stdout to text browser (i.e. console in our UI)
-        # self.stdout = StdoutRedirect()
-        # self.stdout.start()
-        # self.stdout.printOccur.connect(
-        #     lambda line: self.__append_text_line(line)
-        # )
-        # self.stdout.logger = self.logger
+        self.stdout = StdoutRedirect()
+        self.stdout.start()
+        self.stdout.printOccur.connect(
+            lambda line: self.__append_text_line(line)
+        )
+        self.stdout.logger = self.logger
 
         # Set signal for thread communication
         self.stream = ThreadSignal()
@@ -232,6 +235,7 @@ class Form(QDialog):
 
         # Connect up the buttons
         self.ui.update_network_esp32.clicked.connect(self.update_network_esp32)
+        self.ui.update_network_esp32_interpreter.clicked.connect(self.update_network_esp32_interpreter)
         self.ui.update_stm32_modules.clicked.connect(self.update_stm32_modules)
         self.ui.update_network_stm32.clicked.connect(self.update_network_stm32)
         self.ui.translate_button.clicked.connect(self.translate_button_text)
@@ -239,6 +243,7 @@ class Form(QDialog):
 
         self.buttons = [
             self.ui.update_network_esp32,
+            self.ui.update_network_esp32_interpreter,
             self.ui.update_stm32_modules,
             self.ui.update_network_stm32,
             self.ui.devmode_button,
@@ -293,7 +298,32 @@ class Form(QDialog):
         ).start()
         esp32_updater = ESP32FirmwareUpdater()
         esp32_updater.set_ui(self.ui)
-        th.Thread(target=esp32_updater.update_firmware, daemon=True).start()
+        th.Thread(
+            target=esp32_updater.update_firmware,
+            daemon=True
+        ).start()
+        self.firmware_updater = esp32_updater
+
+    def update_network_esp32_interpreter(self):
+        button_start = time.time()
+        if self.firmware_updater and self.firmware_updater.update_in_progress:
+            return
+        self.ui.update_network_esp32_interpreter.setStyleSheet(
+            f"border-image: url({self.pressed_path}); font-size: 16px"
+        )
+        self.ui.console.clear()
+        print("ESP32 Firmware Updater has been initialized for esp interpreter update!")
+        th.Thread(
+            target=self.__click_motion, args=(1, button_start),
+            daemon=True
+        ).start()
+        esp32_updater = ESP32FirmwareUpdater()
+        esp32_updater.set_ui(self.ui)
+        th.Thread(
+            target=esp32_updater.update_firmware,
+            args=(True,),
+            daemon=True
+        ).start()
         self.firmware_updater = esp32_updater
 
     def update_stm32_modules(self):
@@ -306,12 +336,13 @@ class Form(QDialog):
         self.ui.console.clear()
         print("STM32 Firmware Updater has been initialized for module update!")
         th.Thread(
-            target=self.__click_motion, args=(1, button_start), daemon=True
+            target=self.__click_motion, args=(2, button_start), daemon=True
         ).start()
         stm32_updater = STM32FirmwareUpdater()
         stm32_updater.set_ui(self.ui)
         th.Thread(
-            target=stm32_updater.update_module_firmware, daemon=True
+            target=stm32_updater.update_module_firmware,
+            daemon=True
         ).start()
         self.firmware_updater = stm32_updater
 
@@ -325,7 +356,7 @@ class Form(QDialog):
         self.ui.console.clear()
         print("STM32 Firmware Updater has been initialized for base update!")
         th.Thread(
-            target=self.__click_motion, args=(2, button_start), daemon=True
+            target=self.__click_motion, args=(3, button_start), daemon=True
         ).start()
         stm32_updater = STM32FirmwareUpdater()
         stm32_updater.set_ui(self.ui)
@@ -343,7 +374,7 @@ class Form(QDialog):
             "font-size: 13px"
         )
         th.Thread(
-            target=self.__click_motion, args=(3, button_start), daemon=True
+            target=self.__click_motion, args=(4, button_start), daemon=True
         ).start()
         if self.console:
             self.ui.console.hide()
@@ -360,10 +391,11 @@ class Form(QDialog):
             "font-size: 13px"
         )
         th.Thread(
-            target=self.__click_motion, args=(4, button_start), daemon=True
+            target=self.__click_motion, args=(5, button_start), daemon=True
         ).start()
         button_en = [
             "Update Network ESP32",
+            "Update Network ESP32 Interpreter",
             "Update STM32 Modules",
             "Update Network STM32",
             "Dev Mode",
@@ -371,6 +403,7 @@ class Form(QDialog):
         ]
         button_kr = [
             "네트워크 모듈 업데이트",
+            "네트워크 모듈 인터프리터 초기화",
             "모듈 초기화",
             "네트워크 모듈 초기화",
             "개발자 모드",
@@ -456,10 +489,9 @@ class Form(QDialog):
                 # version update
                 with open(path.join(local_path, "version.txt"), "w") as data_file:
                     data_file.write(last_version_name)
+
         except URLError:
-            raise URLError(
-                "Failed to download firmware. Check your internet."
-            )
+            print("Failed to download firmware.")
 
     def check_network_base_version(self):
         local_version_path = path.join(
@@ -495,9 +527,7 @@ class Form(QDialog):
                     data_file.write(last_version_name)
 
         except URLError:
-            raise URLError(
-                "Failed to download firmware. Check your internet."
-            )
+            print("Failed to download firmware.")
 
     def check_esp32_version(self):
         local_version_path = path.join(
@@ -555,9 +585,7 @@ class Form(QDialog):
                     data_file.write(last_version_name)
 
         except URLError:
-            raise URLError(
-                "Failed to download firmware. Check your internet."
-            )
+            print("Failed to download firmware.")
     #
     # Helper functions
     #
@@ -615,7 +643,7 @@ class Form(QDialog):
         while time.time() - start_time < 0.2:
             pass
 
-        if button_type in [3, 4]:
+        if button_type in [4, 5]:
             self.buttons[button_type].setStyleSheet(
                 f"border-image: url({self.language_frame_path});"
                 "font-size: 13px"
@@ -625,7 +653,7 @@ class Form(QDialog):
                 f"border-image: url({self.active_path}); font-size: 16px"
             )
             for i, q_button in enumerate(self.buttons):
-                if i in [button_type, 3, 4]:
+                if i in [button_type, 4, 5]:
                     continue
                 q_button.setStyleSheet(
                     f"border-image: url({self.inactive_path}); font-size: 16px"

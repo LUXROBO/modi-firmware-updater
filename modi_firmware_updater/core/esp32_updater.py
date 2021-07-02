@@ -66,60 +66,94 @@ class ESP32FirmwareUpdater(serial.Serial):
     def set_ui(self, ui):
         self.ui = ui
 
-    def update_firmware(self, force=False):
-        print("Turning interpreter off...")
-        self.write(b'{"c":160,"s":0,"d":18,"b":"AAMAAAAA","l":6}')
+    def update_firmware(self, update_interpreter=False, force=False):
+        if update_interpreter:
+            print("Reset interpreter...")
+            self.update_in_progress = True
+            self.write(b'{"c":160,"s":0,"d":18,"b":"AAMAAAAA","l":6}')
+            print("ESP interpreter reset is complete!!")
 
-        self.update_in_progress = True
-        self.__boot_to_app()
-        self.__version_to_update = self.__get_latest_version()
-        self.id = self.__get_esp_id()
-        self.version = self.__get_esp_version()
-        if self.version and self.version == self.__version_to_update:
-            if not force and not self.ui:
-                response = input(
-                    f"ESP version already up to date (v{self.version})."
-                    f" Do you still want to proceed? [y/n]: "
+            time.sleep(1)
+            self.update_in_progress = False
+            self.flushInput()
+            self.flushOutput()
+            self.close()
+
+            if self.ui:
+                self.ui.update_stm32_modules.setStyleSheet(
+                    f"border-image: url({self.ui.active_path}); font-size: 16px"
                 )
-                if "y" not in response:
-                    return
+                self.ui.update_stm32_modules.setEnabled(True)
+                self.ui.update_network_stm32.setStyleSheet(
+                    f"border-image: url({self.ui.active_path}); font-size: 16px"
+                )
+                self.ui.update_network_stm32.setEnabled(True)
+                self.ui.update_network_esp32.setStyleSheet(
+                    f"border-image: url({self.ui.active_path}); font-size: 16px"
+                )
+                self.ui.update_network_esp32.setEnabled(True)
+                if self.ui.is_english:
+                    self.ui.update_network_esp32_interpreter.setText("Update Network ESP32 Interpreter")
+                else:
+                    self.ui.update_network_esp32_interpreter.setText("네트워크 모듈 인터프리터 초기화")
+        else:
+            print("Turning interpreter off...")
+            self.write(b'{"c":160,"s":0,"d":18,"b":"AAMAAAAA","l":6}')
 
-        print(f"Updating v{self.version} to v{self.__version_to_update}")
-        firmware_buffer = self.__compose_binary_firmware()
+            self.update_in_progress = True
+            self.__boot_to_app()
+            self.__version_to_update = self.__get_latest_version()
+            self.id = self.__get_esp_id()
+            self.version = self.__get_esp_version()
+            if self.version and self.version == self.__version_to_update:
+                if not force and not self.ui:
+                    response = input(
+                        f"ESP version already up to date (v{self.version})."
+                        f" Do you still want to proceed? [y/n]: "
+                    )
+                    if "y" not in response:
+                        return
 
-        self.__device_ready()
-        self.__device_sync()
-        self.__flash_attach()
-        self.__set_flash_param()
-        manager = None
+            print(f"Updating v{self.version} to v{self.__version_to_update}")
+            firmware_buffer = self.__compose_binary_firmware()
 
-        self.__write_binary_firmware(firmware_buffer, manager)
-        print("Booting to application...")
-        self.__wait_for_json()
-        self.__boot_to_app()
-        time.sleep(1)
-        self.__set_esp_version(self.__version_to_update)
-        print("ESP firmware update is complete!!")
+            self.__device_ready()
+            self.__device_sync()
+            self.__flash_attach()
+            self.__set_flash_param()
+            manager = None
 
-        time.sleep(1)
-        self.update_in_progress = False
-        self.flushInput()
-        self.flushOutput()
-        self.close()
+            self.__write_binary_firmware(firmware_buffer, manager)
+            print("Booting to application...")
+            self.__wait_for_json()
+            self.__boot_to_app()
+            time.sleep(1)
+            self.__set_esp_version(self.__version_to_update)
+            print("ESP firmware update is complete!!")
 
-        if self.ui:
-            self.ui.update_stm32_modules.setStyleSheet(
-                f"border-image: url({self.ui.active_path}); font-size: 16px"
-            )
-            self.ui.update_stm32_modules.setEnabled(True)
-            self.ui.update_network_stm32.setStyleSheet(
-                f"border-image: url({self.ui.active_path}); font-size: 16px"
-            )
-            self.ui.update_network_stm32.setEnabled(True)
-            if self.ui.is_english:
-                self.ui.update_network_esp32.setText("Update Network ESP32")
-            else:
-                self.ui.update_network_esp32.setText("네트워크 모듈 업데이트")
+            time.sleep(1)
+            self.update_in_progress = False
+            self.flushInput()
+            self.flushOutput()
+            self.close()
+
+            if self.ui:
+                self.ui.update_stm32_modules.setStyleSheet(
+                    f"border-image: url({self.ui.active_path}); font-size: 16px"
+                )
+                self.ui.update_stm32_modules.setEnabled(True)
+                self.ui.update_network_stm32.setStyleSheet(
+                    f"border-image: url({self.ui.active_path}); font-size: 16px"
+                )
+                self.ui.update_network_stm32.setEnabled(True)
+                self.ui.update_network_esp32_interpreter.setStyleSheet(
+                    f"border-image: url({self.ui.active_path}); font-size: 16px"
+                )
+                self.ui.update_network_esp32_interpreter.setEnabled(True)
+                if self.ui.is_english:
+                    self.ui.update_network_esp32.setText("Update Network ESP32")
+                else:
+                    self.ui.update_network_esp32.setText("네트워크 모듈 업데이트")
 
     def __device_ready(self):
         print("Redirecting connection to esp device...")
