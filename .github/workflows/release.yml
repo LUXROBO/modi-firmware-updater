@@ -3,6 +3,8 @@ on:
     tags:
     - 'v*'
 
+  workflow_dispatch:
+
 name: Release executables for Windows and macOS
 
 jobs:
