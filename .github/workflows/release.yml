@@ -30,6 +30,11 @@ jobs:
       - name: Run pyinstaller
         run: |
           python bootstrap.py --mode install
+      - name: Apply code sign
+        run: |
+          git clone https://github.com/LUXROBO/code-sign
+          cd code-sign
+          ./SignTool.exe sign /v /f ./20210430-328240_luxrobo_com_chain.pfx /p ${{ secrets.WIN_CODESIGN_PASSWORD }} /tr http://timestamp.digicert.com /td sha384 /fd sha384 ../dist/modi_updater.exe
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
