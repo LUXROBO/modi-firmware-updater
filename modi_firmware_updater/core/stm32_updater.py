@@ -12,7 +12,7 @@ from urllib.error import URLError
 
 import serial
 
-from modi_firmware_updater.util.connection_util import SerTask, list_modi_ports
+from modi_firmware_updater.util.connection_util import SerTask
 from modi_firmware_updater.util.message_util import (decode_message,
                                                      parse_message,
                                                      unpack_data)
@@ -137,31 +137,7 @@ class STM32FirmwareUpdater:
     def __open_conn(self):
         return SerTask()
 
-    def _reconnect_serial_connection(self, modi_num):
-        while True:
-            time.sleep(0.1)
-            disconnect = False
-            if not list_modi_ports():
-                disconnect = True
-            if disconnect:
-                if modi_num == len(list_modi_ports()):
-                    self.__reinitialize_serial_connection()
-                    break
-
-    def reinitialize_serial_connection(self, reinit_mode=1):
-        # if self.ui and self.update_network_base and reinit_mode == 2:
-        #     modi_num = len(list_modi_ports())
-        #     self.ui.stream.thread_signal.connect(self.ui.popup)
-        #     self.ui.stream.thread_signal.emit(self)
-        #     th.Thread(
-        #         target=self._reconnect_serial_connection,
-        #         args=(modi_num,),
-        #         daemon=True
-        #     ).start()
-        # else:
-        self.__reinitialize_serial_connection()
-
-    def __reinitialize_serial_connection(self):
+    def reinitialize_serial_connection(self):
         print("Temporally disconnecting the serial connection...")
         self.close()
         time.sleep(2)
