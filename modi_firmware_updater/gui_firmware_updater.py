@@ -19,6 +19,7 @@ from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QDialog
 
 from modi_firmware_updater.core.esp32_updater import ESP32FirmwareUpdater
+from modi_firmware_updater.core.esp32_updater import ESP32FirmwareMultiUpdater
 from modi_firmware_updater.core.stm32_updater import STM32FirmwareUpdater
 
 
@@ -149,6 +150,7 @@ class Form(QDialog):
 
         if installer:
             ui_path = os.path.join(os.path.dirname(__file__), "updater.ui")
+            update_list_ui_path = os.path.join(os.path.dirname(__file__), "update_list.ui")
             if sys.platform.startswith("win"):
                 self.component_path = pathlib.PurePosixPath(
                     pathlib.PurePath(__file__), ".."
@@ -160,6 +162,9 @@ class Form(QDialog):
         else:
             ui_path = os.path.join(
                 os.path.dirname(__file__), "assets", "updater.ui"
+            )
+            update_list_ui_path = os.path.join(
+                os.path.dirname(__file__), "assets", "update_list.ui"
             )
             if sys.platform.startswith("win"):
                 self.component_path = pathlib.PurePosixPath(
@@ -180,6 +185,8 @@ class Form(QDialog):
         qPixmapVar = QtGui.QPixmap()
         qPixmapVar.load(logo_path)
         self.ui.lux_logo.setPixmap(qPixmapVar)
+
+        self.update_list_form = UpdateListForm(update_list_ui_path, self.component_path)
 
         # Buttons image
         self.active_path = pathlib.PurePosixPath(
@@ -317,8 +324,11 @@ class Form(QDialog):
         th.Thread(
             target=self.__click_motion, args=(0, button_start), daemon=True
         ).start()
-        esp32_updater = ESP32FirmwareUpdater()
-        esp32_updater.set_ui(self.ui)
+        self.update_list_form.reset_device_list()
+        self.update_list_form.ui.show()
+        esp32_updater = ESP32FirmwareMultiUpdater()
+        esp32_updater.set_ui(self.ui, self.update_list_form)
+        time.sleep(0.5)
         th.Thread(
             target=esp32_updater.update_firmware,
             daemon=True
@@ -732,3 +742,82 @@ class Form(QDialog):
         return line.startswith("\rUpdating") or line.startswith(
             "\rFirmware Upload: ["
         )
+
+class UpdateListForm(QDialog):
+
+    progress_signal = pyqtSignal(str, int)
+
+    def __init__(self, ui_path, component_path):
+        QDialog.__init__(self)
+
+        self.ui = uic.loadUi(ui_path)
+        self.component_path = component_path
+
+        self.ui_icon_list = [
+            self.ui.image_1,
+            self.ui.image_2,
+            self.ui.image_3,
+            self.ui.image_4,
+            self.ui.image_5,
+            self.ui.image_6,
+            self.ui.image_7,
+            self.ui.image_8,
+            self.ui.image_9,
+            self.ui.image_10
+        ]
+
+        self.ui_port_list = [
+            self.ui.port_1,
+            self.ui.port_2,
+            self.ui.port_3,
+            self.ui.port_4,
+            self.ui.port_5,
+            self.ui.port_6,
+            self.ui.port_7,
+            self.ui.port_8,
+            self.ui.port_9,
+            self.ui.port_10
+        ]
+
+        self.ui_progress_list = [
+            self.ui.progress_bar_1,
+            self.ui.progress_bar_2,
+            self.ui.progress_bar_3,
+            self.ui.progress_bar_4,
+            self.ui.progress_bar_5,
+            self.ui.progress_bar_6,
+            self.ui.progress_bar_7,
+            self.ui.progress_bar_8,
+            self.ui.progress_bar_9,
+            self.ui.progress_bar_10,
+        ]
+
+        self.ui.close_button.clicked.connect(self.ui.close)
+        self.progress_signal.connect(self.progress_value_changed)
+
+    def reset_device_list(self):
+        for i, progress in enumerate(self.ui_progress_list):
+            icon_path = os.path.join(self.component_path, "modules", "network_none.png")
+            pixmap = QtGui.QPixmap()
+            pixmap.load(icon_path)
+
+            self.ui_icon_list[i].setPixmap(pixmap)
+            self.ui_port_list[i].setText("not connected")
+            self.ui_progress_list[i].setValue(0)
+
+    def set_device_list(self, device_list):
+        self.reset_device_list()
+        for i, device in enumerate(device_list):
+            icon_path = os.path.join(self.component_path, "modules", "network.png")
+            pixmap = QtGui.QPixmap()
+            pixmap.load(icon_path)
+
+            self.ui_icon_list[i].setPixmap(pixmap)
+            self.ui_port_list[i].setText(device)
+            self.ui_progress_list[i].setValue(0)
+
+    def progress_value_changed(self, name, value):
+        for i, ui_port in enumerate(self.ui_port_list):
+            if ui_port.text() == name:
+                self.ui_progress_list[i].setValue(value)
+                break
