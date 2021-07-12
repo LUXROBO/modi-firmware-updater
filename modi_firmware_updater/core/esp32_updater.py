@@ -571,6 +571,18 @@ class ESP32FirmwareMultiUpdater():
                         break
 
             if total_sequence != 0:
+                if self.ui:
+                    if self.ui.is_english:
+                        self.ui.update_network_esp32.setText(
+                            f"Network ESP32 update is in progress. "
+                            f"({int(current_sequence/total_sequence*100)}%)"
+                        )
+                    else:
+                        self.ui.update_network_esp32.setText(
+                            f"네트워크 모듈 업데이트가 진행중입니다. "
+                            f"({int(current_sequence/total_sequence*100)}%)"
+                        )
+
                 if self.list_ui:
                     self.list_ui.total_progress_signal.emit(current_sequence / total_sequence * 100.0)
                     self.list_ui.total_status_signal.emit("Uploading...")

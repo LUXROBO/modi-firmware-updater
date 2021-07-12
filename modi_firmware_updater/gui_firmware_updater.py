@@ -795,6 +795,19 @@ class UpdateListForm(QDialog):
             self.ui.progress_bar_10,
         ]
 
+        self.ui_progress_value_list = [
+            self.ui.progress_value_1,
+            self.ui.progress_value_2,
+            self.ui.progress_value_3,
+            self.ui.progress_value_4,
+            self.ui.progress_value_5,
+            self.ui.progress_value_6,
+            self.ui.progress_value_7,
+            self.ui.progress_value_8,
+            self.ui.progress_value_9,
+            self.ui.progress_value_10,
+        ]
+
         self.ui.close_button.clicked.connect(self.ui.close)
         self.progress_signal.connect(self.progress_value_changed)
         self.total_progress_signal.connect(self.total_progress_value_changed)
@@ -812,6 +825,7 @@ class UpdateListForm(QDialog):
             self.ui_icon_list[i].setPixmap(pixmap)
             self.ui_port_list[i].setText("not connected")
             self.ui_progress_list[i].setValue(0)
+            self.ui_progress_value_list[i].setText("0%")
 
     def set_device_list(self, device_list):
         self.reset_device_list()
@@ -819,15 +833,14 @@ class UpdateListForm(QDialog):
             icon_path = os.path.join(self.component_path, "modules", "network.png")
             pixmap = QtGui.QPixmap()
             pixmap.load(icon_path)
-
             self.ui_icon_list[i].setPixmap(pixmap)
             self.ui_port_list[i].setText(device)
-            self.ui_progress_list[i].setValue(0)
 
     def progress_value_changed(self, name, value):
         for i, ui_port in enumerate(self.ui_port_list):
             if ui_port.text() == name:
                 self.ui_progress_list[i].setValue(value)
+                self.ui_progress_value_list[i].setText(str(value) + "%")
                 break
 
     def total_progress_value_changed(self, value):
