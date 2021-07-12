@@ -315,6 +315,7 @@ class Form(QDialog):
     def update_network_esp32(self):
         button_start = time.time()
         if self.firmware_updater and self.firmware_updater.update_in_progress:
+            self.update_list_form.ui.show()
             return
         self.ui.update_network_esp32.setStyleSheet(
             f"border-image: url({self.pressed_path}); font-size: 16px"
@@ -746,6 +747,8 @@ class Form(QDialog):
 class UpdateListForm(QDialog):
 
     progress_signal = pyqtSignal(str, int)
+    total_progress_signal = pyqtSignal(int)
+    total_status_signal = pyqtSignal(str)
 
     def __init__(self, ui_path, component_path):
         QDialog.__init__(self)
@@ -794,8 +797,13 @@ class UpdateListForm(QDialog):
 
         self.ui.close_button.clicked.connect(self.ui.close)
         self.progress_signal.connect(self.progress_value_changed)
+        self.total_progress_signal.connect(self.total_progress_value_changed)
+        self.total_status_signal.connect(self.total_progress_status_changed)
 
     def reset_device_list(self):
+        self.ui.progress_bar_total.setValue(0)
+        self.ui.total_status.setText("")
+
         for i, progress in enumerate(self.ui_progress_list):
             icon_path = os.path.join(self.component_path, "modules", "network_none.png")
             pixmap = QtGui.QPixmap()
@@ -821,3 +829,9 @@ class UpdateListForm(QDialog):
             if ui_port.text() == name:
                 self.ui_progress_list[i].setValue(value)
                 break
+
+    def total_progress_value_changed(self, value):
+        self.ui.progress_bar_total.setValue(value)
+
+    def total_progress_status_changed(self, status):
+        self.ui.total_status.setText(status)

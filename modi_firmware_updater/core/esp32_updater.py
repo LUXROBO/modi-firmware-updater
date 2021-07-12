@@ -571,9 +571,13 @@ class ESP32FirmwareMultiUpdater():
                         break
 
             if total_sequence != 0:
+                if self.list_ui:
+                    self.list_ui.total_progress_signal.emit(current_sequence / total_sequence * 100.0)
+                    self.list_ui.total_status_signal.emit("Uploading...")
+
                 print(f"\r{self.__progress_bar(current_sequence, total_sequence)}", end="")
 
-            time.sleep(0.1)
+            time.sleep(0.05)
 
             if is_done:
                 break
@@ -582,6 +586,7 @@ class ESP32FirmwareMultiUpdater():
 
         if self.list_ui:
             self.list_ui.ui.close_button.setEnabled(True)
+            self.list_ui.total_status_signal.emit("Complete")
 
         if update_interpreter:
             if self.ui:
@@ -620,7 +625,7 @@ class ESP32FirmwareMultiUpdater():
                 else:
                     self.ui.update_network_esp32.setText("네트워크 모듈 업데이트")
 
-        print("ESP firmware update is complete!!")
+        print("\nESP firmware update is complete!!")
 
     @staticmethod
     def __progress_bar(current: int, total: int) -> str:

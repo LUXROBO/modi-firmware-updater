@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>766</width>
-    <height>353</height>
+    <width>846</width>
+    <height>392</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -540,17 +540,18 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_3">
      <item>
-      <spacer name="horizontalSpacer_13">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
+      <widget class="QLabel" name="total_status">
+       <property name="text">
+        <string>TextLabel</string>
        </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
+      </widget>
+     </item>
+     <item>
+      <widget class="QProgressBar" name="progress_bar_total">
+       <property name="value">
+        <number>24</number>
        </property>
-      </spacer>
+      </widget>
      </item>
      <item>
       <widget class="QPushButton" name="close_button">
