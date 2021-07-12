@@ -339,6 +339,7 @@ class Form(QDialog):
     def update_network_esp32_interpreter(self):
         button_start = time.time()
         if self.firmware_updater and self.firmware_updater.update_in_progress:
+            self.update_list_form.ui.show()
             return
         self.ui.update_network_esp32_interpreter.setStyleSheet(
             f"border-image: url({self.pressed_path}); font-size: 16px"
@@ -346,11 +347,13 @@ class Form(QDialog):
         self.ui.console.clear()
         print("ESP32 Firmware Updater has been initialized for esp interpreter update!")
         th.Thread(
-            target=self.__click_motion, args=(1, button_start),
-            daemon=True
+            target=self.__click_motion, args=(1, button_start), daemon=True
         ).start()
-        esp32_updater = ESP32FirmwareUpdater()
-        esp32_updater.set_ui(self.ui)
+        self.update_list_form.reset_device_list()
+        self.update_list_form.ui.show()
+        esp32_updater = ESP32FirmwareMultiUpdater()
+        esp32_updater.set_ui(self.ui, self.update_list_form)
+        time.sleep(0.5)
         th.Thread(
             target=esp32_updater.update_firmware,
             args=(True,),

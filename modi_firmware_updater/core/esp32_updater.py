@@ -91,9 +91,17 @@ class ESP32FirmwareUpdater(serial.Serial):
     def update_firmware(self, update_interpreter=False, force=False):
         if update_interpreter:
             self.__print("Reset interpreter...")
+
+            self.current_sequence = 0
+            self.total_sequence = 1
             self.update_in_progress = True
+            time.sleep(1)
+
             self.write(b'{"c":160,"s":0,"d":18,"b":"AAMAAAAA","l":6}')
             self.__print("ESP interpreter reset is complete!!")
+
+            self.current_sequence = 1
+            self.total_sequence = 1
 
             time.sleep(1)
             self.update_in_progress = False
@@ -572,16 +580,28 @@ class ESP32FirmwareMultiUpdater():
 
             if total_sequence != 0:
                 if self.ui:
-                    if self.ui.is_english:
-                        self.ui.update_network_esp32.setText(
-                            f"Network ESP32 update is in progress. "
-                            f"({int(current_sequence/total_sequence*100)}%)"
-                        )
+                    if update_interpreter:
+                        if self.ui.is_english:
+                            self.ui.update_network_esp32_interpreter.setText(
+                                f"Network ESP32 Interpreter reset is in progress. "
+                                f"({int(current_sequence/total_sequence*100)}%)"
+                            )
+                        else:
+                            self.ui.update_network_esp32_interpreter.setText(
+                                f"네트워크 모듈 인터프리터 초기화가 진행중입니다. "
+                                f"({int(current_sequence/total_sequence*100)}%)"
+                            )
                     else:
-                        self.ui.update_network_esp32.setText(
-                            f"네트워크 모듈 업데이트가 진행중입니다. "
-                            f"({int(current_sequence/total_sequence*100)}%)"
-                        )
+                        if self.ui.is_english:
+                            self.ui.update_network_esp32.setText(
+                                f"Network ESP32 update is in progress. "
+                                f"({int(current_sequence/total_sequence*100)}%)"
+                            )
+                        else:
+                            self.ui.update_network_esp32.setText(
+                                f"네트워크 모듈 업데이트가 진행중입니다. "
+                                f"({int(current_sequence/total_sequence*100)}%)"
+                            )
 
                 if self.list_ui:
                     self.list_ui.total_progress_signal.emit(current_sequence / total_sequence * 100.0)
