@@ -152,25 +152,17 @@ class Form(QDialog):
             esp32_update_list_ui_path = os.path.join(os.path.dirname(__file__), "esp32_update_list.ui")
             stm32_update_list_ui_path = os.path.join(os.path.dirname(__file__), "stm32_update_list.ui")
             if sys.platform.startswith("win"):
-                self.component_path = pathlib.PurePosixPath(
-                    pathlib.PurePath(__file__), ".."
-                )
+                self.component_path = pathlib.PurePosixPath(pathlib.PurePath(__file__), "..")
             else:
-                self.component_path = os.path.dirname(__file__).replace(
-                    "util", ""
-                )
+                self.component_path = os.path.dirname(__file__).replace("util", "")
         else:
             ui_path = os.path.join(os.path.dirname(__file__), "assets", "updater.ui")
             esp32_update_list_ui_path = os.path.join(os.path.dirname(__file__), "assets", "esp32_update_list.ui")
             stm32_update_list_ui_path = os.path.join(os.path.dirname(__file__), "assets", "stm32_update_list.ui")
             if sys.platform.startswith("win"):
-                self.component_path = pathlib.PurePosixPath(
-                    pathlib.PurePath(__file__), "..", "assets", "component"
-                )
+                self.component_path = pathlib.PurePosixPath(pathlib.PurePath(__file__), "..", "assets", "component")
             else:
-                self.component_path = os.path.join(
-                    os.path.dirname(__file__), "assets", "component"
-                )
+                self.component_path = os.path.join(os.path.dirname(__file__), "assets", "component")
         self.ui = uic.loadUi(ui_path)
 
         self.ui.setStyleSheet("background-color: white")
@@ -187,40 +179,18 @@ class Form(QDialog):
         self.stm32_update_list_form = STM32UpdateListForm(stm32_update_list_ui_path, self.component_path)
 
         # Buttons image
-        self.active_path = pathlib.PurePosixPath(
-            self.component_path, "btn_frame_active.png"
-        )
-        self.inactive_path = pathlib.PurePosixPath(
-            self.component_path, "btn_frame_inactive.png"
-        )
-        self.pressed_path = pathlib.PurePosixPath(
-            self.component_path, "btn_frame_pressed.png"
-        )
-        self.language_frame_path = pathlib.PurePosixPath(
-            self.component_path, "lang_frame.png"
-        )
-        self.language_frame_pressed_path = pathlib.PurePosixPath(
-            self.component_path, "lang_frame_pressed.png"
-        )
+        self.active_path = pathlib.PurePosixPath(self.component_path, "btn_frame_active.png")
+        self.inactive_path = pathlib.PurePosixPath(self.component_path, "btn_frame_inactive.png")
+        self.pressed_path = pathlib.PurePosixPath(self.component_path, "btn_frame_pressed.png")
+        self.language_frame_path = pathlib.PurePosixPath(self.component_path, "lang_frame.png")
+        self.language_frame_pressed_path = pathlib.PurePosixPath(self.component_path, "lang_frame_pressed.png")
 
-        self.ui.update_network_esp32.setStyleSheet(
-            f"border-image: url({self.active_path}); font-size: 16px"
-        )
-        self.ui.update_network_esp32_interpreter.setStyleSheet(
-            f"border-image: url({self.active_path}); font-size: 16px"
-        )
-        self.ui.update_stm32_modules.setStyleSheet(
-            f"border-image: url({self.active_path}); font-size: 16px"
-        )
-        self.ui.update_network_stm32.setStyleSheet(
-            f"border-image: url({self.active_path}); font-size: 16px"
-        )
-        self.ui.translate_button.setStyleSheet(
-            f"border-image: url({self.language_frame_path}); font-size: 13px"
-        )
-        self.ui.devmode_button.setStyleSheet(
-            f"border-image: url({self.language_frame_path}); font-size: 13px"
-        )
+        self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.active_path}); font-size: 16px")
+        self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.active_path}); font-size: 16px")
+        self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.active_path}); font-size: 16px")
+        self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.active_path}); font-size: 16px")
+        self.ui.translate_button.setStyleSheet(f"border-image: url({self.language_frame_path}); font-size: 13px")
+        self.ui.devmode_button.setStyleSheet(f"border-image: url({self.language_frame_path}); font-size: 13px")
         self.ui.console.setStyleSheet("font-size: 10px")
 
         self.ui.setWindowTitle("MODI Firmware Updater")
@@ -315,9 +285,7 @@ class Form(QDialog):
         if self.firmware_updater and self.firmware_updater.update_in_progress:
             self.esp32_update_list_form.ui.show()
             return
-        self.ui.update_network_esp32.setStyleSheet(
-            f"border-image: url({self.pressed_path}); font-size: 16px"
-        )
+        self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.pressed_path}); font-size: 16px")
         self.ui.console.clear()
         print("ESP32 Firmware Updater has been initialized for esp update!")
         th.Thread(
@@ -339,9 +307,7 @@ class Form(QDialog):
         if self.firmware_updater and self.firmware_updater.update_in_progress:
             self.esp32_update_list_form.ui.show()
             return
-        self.ui.update_network_esp32_interpreter.setStyleSheet(
-            f"border-image: url({self.pressed_path}); font-size: 16px"
-        )
+        self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.pressed_path}); font-size: 16px")
         self.ui.console.clear()
         print("ESP32 Firmware Updater has been initialized for esp interpreter update!")
         th.Thread(
@@ -364,9 +330,7 @@ class Form(QDialog):
         if self.firmware_updater and self.firmware_updater.update_in_progress:
             self.stm32_update_list_form.ui.show()
             return
-        self.ui.update_stm32_modules.setStyleSheet(
-            f"border-image: url({self.pressed_path}); font-size: 16px"
-        )
+        self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.pressed_path}); font-size: 16px")
         self.ui.console.clear()
         print("STM32 Firmware Updater has been initialized for module update!")
         th.Thread(
@@ -429,10 +393,7 @@ class Form(QDialog):
 
     def translate_button_text(self):
         button_start = time.time()
-        self.ui.translate_button.setStyleSheet(
-            f"border-image: url({self.language_frame_pressed_path});"
-            "font-size: 13px"
-        )
+        self.ui.translate_button.setStyleSheet(f"border-image: url({self.language_frame_pressed_path}); font-size: 13px")
         th.Thread(
             target=self.__click_motion, args=(5, button_start), daemon=True
         ).start()
@@ -490,9 +451,7 @@ class Form(QDialog):
                     "ultrasonic"
                 ]
                 download_response = conn.read()
-                zip_content = zipfile.ZipFile(
-                    io.BytesIO(download_response), "r"
-                )
+                zip_content = zipfile.ZipFile(io.BytesIO(download_response), "r")
 
                 for i, module in enumerate(module_name):
                     src_path = module + "/Base_module.bin"
@@ -524,9 +483,7 @@ class Form(QDialog):
             # network base update
             with ur.urlopen(self.latest_network_firmware_path, timeout=5) as conn:
                 download_response = conn.read()
-                zip_content = zipfile.ZipFile(
-                    io.BytesIO(download_response), "r"
-                )
+                zip_content = zipfile.ZipFile(io.BytesIO(download_response), "r")
 
                 with open(path.join(self.local_network_firmware_path, "network.bin"), "wb") as data_file:
                     data_file.write(zip_content.read("network.bin"))
@@ -549,9 +506,7 @@ class Form(QDialog):
             # ota update
             with ur.urlopen(self.latest_esp32_firmware_path[0], timeout=5) as conn:
                 download_response = conn.read()
-                zip_content = zipfile.ZipFile(
-                    io.BytesIO(download_response), "r"
-                )
+                zip_content = zipfile.ZipFile(io.BytesIO(download_response), "r")
 
                 with open(path.join(self.local_esp32_firmware_path, "modi_ota_factory.bin"), "wb") as data_file:
                     data_file.write(zip_content.read("modi_ota_factory.bin"))
@@ -562,9 +517,7 @@ class Form(QDialog):
             # bootloader, partitions, esp32 update
             with ur.urlopen(self.latest_esp32_firmware_path[1], timeout=5) as conn:
                 download_response = conn.read()
-                zip_content = zipfile.ZipFile(
-                    io.BytesIO(download_response), "r"
-                )
+                zip_content = zipfile.ZipFile(io.BytesIO(download_response), "r")
 
                 with open(path.join(self.local_esp32_firmware_path, "bootloader.bin"), "wb") as data_file:
                     data_file.write(zip_content.read("bootloader.bin"))
@@ -660,9 +613,7 @@ class Form(QDialog):
         logger = logging.getLogger("GUI MODI Firmware Updater Logger")
         logger.setLevel(logging.DEBUG)
 
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         file_handler = logging.FileHandler("gmfu.log")
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
@@ -710,20 +661,13 @@ class Form(QDialog):
             pass
 
         if button_type in [4, 5]:
-            self.buttons[button_type].setStyleSheet(
-                f"border-image: url({self.language_frame_path});"
-                "font-size: 13px"
-            )
+            self.buttons[button_type].setStyleSheet(f"border-image: url({self.language_frame_path}); font-size: 13px")
         else:
-            self.buttons[button_type].setStyleSheet(
-                f"border-image: url({self.active_path}); font-size: 16px"
-            )
+            self.buttons[button_type].setStyleSheet(f"border-image: url({self.active_path}); font-size: 16px")
             for i, q_button in enumerate(self.buttons):
                 if i in [button_type, 4, 5]:
                     continue
-                q_button.setStyleSheet(
-                    f"border-image: url({self.inactive_path}); font-size: 16px"
-                )
+                q_button.setStyleSheet(f"border-image: url({self.inactive_path}); font-size: 16px")
                 q_button.setEnabled(False)
 
     def __append_text_line(self, line):
@@ -751,9 +695,7 @@ class Form(QDialog):
 
     @staticmethod
     def __is_update_progress_line(line):
-        return line.startswith("\rUpdating") or line.startswith(
-            "\rFirmware Upload: ["
-        )
+        return line.startswith("\rUpdating") or line.startswith("\rFirmware Upload: [")
 
 class ESP32UpdateListForm(QDialog):
 
@@ -983,7 +925,7 @@ class STM32UpdateListForm(QDialog):
             current_icon_pixmap = QtGui.QPixmap()
             current_icon_pixmap.load(current_icon_path)
             self.ui_current_icon_list[i].setPixmap(current_icon_pixmap)
-            
+
             self.ui_port_list[i].setText("not connected")
             self.ui_current_progress_list[i].setValue(0)
             self.ui_total_progress_list[i].setValue(0)

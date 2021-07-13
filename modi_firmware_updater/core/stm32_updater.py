@@ -148,7 +148,7 @@ class STM32FirmwareUpdater:
         else:
             return SerTask()
 
-    def reinitialize_serial_connection(self):
+    def reinitialize_serial_connection(self, reinit_mode):
         self.__print("Temporally disconnecting the serial connection...")
         self.close()
         time.sleep(2)
@@ -785,7 +785,7 @@ class STM32FirmwareMultiUpdater():
 
                         break
 
-            total_progress = total_progress / len(self.stm32_updaters)
+            print(f"\r{self.__progress_bar(total_progress, 100)}", end="")
 
             if self.ui:
                 if update_network_base:
@@ -869,3 +869,12 @@ class STM32FirmwareMultiUpdater():
                         break
 
         print("\nSTM firmware update is complete!!")
+
+    @staticmethod
+    def __progress_bar(current: int, total: int) -> str:
+        curr_bar = int(50 * current // total)
+        rest_bar = int(50 - curr_bar)
+        return (
+            f"Firmware Upload: [{'=' * curr_bar}>{'.' * rest_bar}] "
+            f"{100 * current / total:3.1f}%"
+        )
