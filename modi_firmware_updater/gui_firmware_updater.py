@@ -350,7 +350,7 @@ class Form(QDialog):
     def update_network_stm32(self):
         button_start = time.time()
         if self.firmware_updater and self.firmware_updater.update_in_progress:
-            # self.stm32_update_list_form.ui.show()
+            self.stm32_update_list_form.ui.show()
             return
         self.ui.update_network_stm32.setStyleSheet(
             f"border-image: url({self.pressed_path}); font-size: 16px"
@@ -360,13 +360,11 @@ class Form(QDialog):
         th.Thread(
             target=self.__click_motion, args=(3, button_start), daemon=True
         ).start()
-        # self.stm32_update_list_form.reset_device_list()
-        # self.stm32_update_list_form.ui.show()
-        # stm32_updater = STM32FirmwareMultiUpdater()
-        # stm32_updater.set_ui(self.ui, self.stm32_update_list_form)
-        # time.sleep(0.5)
-        stm32_updater = STM32FirmwareUpdater()
-        stm32_updater.set_ui(self.ui)
+        self.stm32_update_list_form.reset_device_list()
+        self.stm32_update_list_form.ui.show()
+        stm32_updater = STM32FirmwareMultiUpdater()
+        stm32_updater.set_ui(self.ui, self.stm32_update_list_form)
+        time.sleep(0.5)
         th.Thread(
             target=stm32_updater.update_module_firmware,
             args=(True,),

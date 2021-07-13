@@ -773,15 +773,24 @@ class STM32FirmwareMultiUpdater():
                             if self.list_ui:
                                 self.list_ui.current_module_changed(stm32_updater.name, stm32_updater.module_type)
                             
-                            if stm32_updater.progress and stm32_updater.modules_updated:
-                                current_module_progress = stm32_updater.progress
-                                total_num = num_to_update[stm32_updater.name]
-                                updated = (len(stm32_updater.modules_updated) - 1) / total_num * 100
-                                current = (current_module_progress) / total_num
-                                total_module_progress = updated + current
-                                total_progress += total_module_progress
-                                if self.list_ui:
-                                    self.list_ui.progress_signal.emit(stm32_updater.name, current_module_progress, total_module_progress)
+                            if update_network_base:
+                                if stm32_updater.progress:
+                                    current_module_progress = stm32_updater.progress
+                                    total_module_progress = stm32_updater.progress
+                                    total_progress += total_module_progress
+                                    if self.list_ui:
+                                        self.list_ui.progress_signal.emit(stm32_updater.name, current_module_progress, total_module_progress)
+
+                            else:
+                                if stm32_updater.progress and stm32_updater.modules_updated:
+                                    current_module_progress = stm32_updater.progress
+                                    total_num = num_to_update[stm32_updater.name]
+                                    updated = (len(stm32_updater.modules_updated) - 1) / total_num * 100
+                                    current = (current_module_progress) / total_num
+                                    total_module_progress = updated + current
+                                    total_progress += total_module_progress
+                                    if self.list_ui:
+                                        self.list_ui.progress_signal.emit(stm32_updater.name, current_module_progress, total_module_progress)
 
                         break
 
