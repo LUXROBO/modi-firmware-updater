@@ -514,16 +514,6 @@ class ESP32FirmwareUpdater(serial.Serial):
 
 class ESP32FirmwareMultiUpdater():
     def __init__(self):
-        self.esp32_updaters = []
-        self.modi_ports = list_modi_ports()
-        if not self.modi_ports:
-            raise serial.SerialException("No MODI port is connected")
-        for modi_port in self.modi_ports:
-            try:
-                self.esp32_updaters.append(ESP32FirmwareUpdater(modi_port.device))
-            except Exception:
-                print('Next network module')
-
         self.update_in_progress = False
         self.ui = None
         self.list_ui = None
@@ -533,16 +523,24 @@ class ESP32FirmwareMultiUpdater():
         self.list_ui = list_ui
 
     def update_firmware(self, update_interpreter=False, force=True):
-        if not self.esp32_updaters:
+        self.esp32_updaters = []
+        self.modi_ports = list_modi_ports()
+        if not self.modi_ports:
             raise serial.SerialException("No MODI port is connected")
 
-        if self.list_ui:
-            device_list = []
-            for modi_port in self.modi_ports:
-                device_list.append(modi_port.device)
-            self.list_ui.set_device_list(device_list)
+        device_list = []
+        for i, modi_port in enumerate(self.modi_ports):
+            if i > 9:
+                break
+            try:
+                if self.list_ui:
+                    device_list.append(modi_port.device)
+                self.esp32_updaters.append(ESP32FirmwareUpdater(modi_port.device))
+            except Exception:
+                print('Next network module')
 
         if self.list_ui:
+            self.list_ui.set_device_list(device_list)
             self.list_ui.ui.close_button.setEnabled(False)
 
         self.update_in_progress = True
@@ -554,6 +552,15 @@ class ESP32FirmwareMultiUpdater():
                 args=(update_interpreter, force),
                 daemon=True
             ).start()
+
+        # wait
+        while True:
+            is_ready = True
+            for esp32_updater in self.esp32_updaters:
+                is_ready = is_ready and esp32_updater.update_in_progress
+            if is_ready:
+                break
+            time.sleep(0.1)
 
         while True:
             current_sequence = 0
