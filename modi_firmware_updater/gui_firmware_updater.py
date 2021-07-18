@@ -295,7 +295,6 @@ class Form(QDialog):
         self.esp32_update_list_form.ui.show()
         esp32_updater = ESP32FirmwareMultiUpdater()
         esp32_updater.set_ui(self.ui, self.esp32_update_list_form)
-        time.sleep(0.5)
         th.Thread(
             target=esp32_updater.update_firmware,
             daemon=True
@@ -317,7 +316,6 @@ class Form(QDialog):
         self.esp32_update_list_form.ui.show()
         esp32_updater = ESP32FirmwareMultiUpdater()
         esp32_updater.set_ui(self.ui, self.esp32_update_list_form)
-        time.sleep(0.5)
         th.Thread(
             target=esp32_updater.update_firmware,
             args=(True,),
@@ -340,7 +338,6 @@ class Form(QDialog):
         self.stm32_update_list_form.ui.show()
         stm32_updater = STM32FirmwareMultiUpdater()
         stm32_updater.set_ui(self.ui, self.stm32_update_list_form)
-        time.sleep(0.5)
         th.Thread(
             target=stm32_updater.update_module_firmware,
             daemon=True
@@ -364,7 +361,6 @@ class Form(QDialog):
         self.stm32_update_list_form.ui.show()
         stm32_updater = STM32FirmwareMultiUpdater()
         stm32_updater.set_ui(self.ui, self.stm32_update_list_form)
-        time.sleep(0.5)
         th.Thread(
             target=stm32_updater.update_module_firmware,
             args=(True,),
