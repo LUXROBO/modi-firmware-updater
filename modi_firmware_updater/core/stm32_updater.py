@@ -5,10 +5,11 @@ import threading as th
 import time
 import urllib.request as ur
 import zipfile
-from base64 import b64encode
+from base64 import b64decode, b64encode
 from io import open
 from os import path
 from urllib.error import URLError
+from itertools import zip_longest
 
 import serial
 
@@ -67,6 +68,7 @@ class STM32FirmwareUpdater:
         self.modules_to_update = []
         self.modules_updated = []
         self.network_id = None
+        self.network_version = None
         self.ui = None
         self.module_type = None
         self.progress = None
@@ -91,10 +93,18 @@ class STM32FirmwareUpdater:
         )
 
     def __assign_network_id(self, sid, data):
-        module_uuid = unpack_data(data, (6, 1))[0]
+        unpacked_data = unpack_data(data, (6, 2))
+        module_uuid = unpacked_data[0]
+        module_version_digits = unpacked_data[1]
         module_type = get_module_type_from_uuid(module_uuid)
         if module_type == "network":
             self.network_id = sid
+            module_version = [
+                str((module_version_digits & 0xE000) >> 13),  # major
+                str((module_version_digits & 0x1F00) >> 8),  # minor
+                str(module_version_digits & 0x00FF)   # patch
+            ]
+            self.network_version = ".".join(module_version)
 
     def update_module_firmware(self, update_network_base=False):
         if update_network_base:
@@ -126,9 +136,7 @@ class STM32FirmwareUpdater:
                     f"({self.network_id})"
                 )
             if not self.update_in_progress:
-                self.request_to_update_firmware(
-                    self.network_id, is_network=True, reinit_mode=r_mode
-                )
+                self.request_to_update_firmware(self.network_id, is_network=True, reinit_mode=r_mode)
         else:
             self.reset_state()
             for target in self.__target_ids:
@@ -148,7 +156,31 @@ class STM32FirmwareUpdater:
         else:
             return SerTask()
 
-    def reinitialize_serial_connection(self, reinit_mode):
+    def _reconnect_serial_connection(self, modi_num):
+        while True:
+            time.sleep(0.1)
+            disconnect = False
+            if not list_modi_ports():
+                disconnect = True
+            if disconnect:
+                if modi_num == len(list_modi_ports()):
+                    self.__reinitialize_serial_connection()
+                    break
+
+    def reinitialize_serial_connection(self, reinit_mode=1):
+        if self.ui and self.update_network_base and reinit_mode == 2:
+            modi_num = len(list_modi_ports())
+            self.ui.stream.thread_signal.connect(self.ui.popup)
+            self.ui.stream.thread_signal.emit(self)
+            th.Thread(
+                target=self._reconnect_serial_connection,
+                args=(modi_num,),
+                daemon=True
+            ).start()
+        else:
+            self.__reinitialize_serial_connection()
+
+    def __reinitialize_serial_connection(self):
         self.__print("Temporally disconnecting the serial connection...")
         self.close()
         time.sleep(2)
@@ -180,6 +212,13 @@ class STM32FirmwareUpdater:
             )
             self.__conn.send_nowait(firmware_update_message)
             self.reinitialize_serial_connection(reinit_mode)
+
+            # if self.network_version and self.__compare_version(self.network_version, "1.2.1") != -1:
+            #     print("need to 뺐꼽")
+            #     self.close()
+            #     time.sleep(2)
+            # else:
+            #     self.reinitialize_serial_connection()
         else:
             firmware_update_message = self.__set_module_state(
                 module_id, Module.UPDATE_FIRMWARE, Module.PNP_OFF
@@ -257,19 +296,21 @@ class STM32FirmwareUpdater:
 
             page_offset = 0 if not self.update_network_base else 0x8800
             for page_begin in range(bin_begin, bin_end + 1, page_size):
-                self.progress = 100 * page_begin // bin_end
+                # self.progress = 100 * page_begin // bin_end
+                progress = 100 * page_begin // bin_end
+                self.progress = progress
 
                 if self.ui:
                     if self.update_network_base:
                         if self.ui.is_english:
                             self.ui.update_network_stm32.setText(
                                 f"Network STM32 update is in progress. "
-                                f"({self.progress}%)"
+                                f"({progress}%)"
                             )
                         else:
                             self.ui.update_network_stm32.setText(
                                 f"네트워크 모듈 초기화가 진행중입니다. "
-                                f"({self.progress}%)"
+                                f"({progress}%)"
                             )
                     else:
                         num_to_update = len(self.modules_to_update)
@@ -279,22 +320,17 @@ class STM32FirmwareUpdater:
                                 f"STM32 modules update is in progress. "
                                 f"({num_updated} / "
                                 f"{num_to_update + num_updated})"
-                                f" ({self.progress}%)"
+                                f"({progress}%)"
                             )
                         else:
                             self.ui.update_stm32_modules.setText(
                                 f"모듈 초기화가 진행중입니다. "
                                 f"({num_updated} / "
                                 f"{num_to_update + num_updated})"
-                                f" ({self.progress}%)"
+                                f"({progress}%)"
                             )
 
-                self.__print(
-                    f"\rUpdating {module_type} ({module_id}) "
-                    f"{self.__progress_bar(page_begin, bin_end)} "
-                    f"{self.progress}%",
-                    end="",
-                )
+                self.__print(f"\rUpdating {module_type} ({module_id}) {self.__progress_bar(page_begin, bin_end)} {progress}%", end="")
 
                 page_end = page_begin + page_size
                 curr_page = bin_buffer[page_begin:page_end]
@@ -340,10 +376,7 @@ class STM32FirmwareUpdater:
                 if not crc_page_success:
                     page_begin -= page_size
                 time.sleep(0.01)
-        self.__print(
-            f"\rUpdating {module_type} ({module_id}) "
-            f"{self.__progress_bar(1, 1)} 100%"
-        )
+        self.__print(f"\rUpdating {module_type} ({module_id}) {self.__progress_bar(1, 1)} 100%")
 
         # Get version info from version_path, using appropriate methods
         version_info, version_file = None, "version.txt"
@@ -476,6 +509,19 @@ class STM32FirmwareUpdater:
         message["l"] = 2
 
         return json.dumps(message, separators=(",", ":"))
+
+    @staticmethod
+    def __compare_version(
+        left: str, right: str
+    ) -> int:
+        left_vars = map(int, left.split('.'))
+        right_vars = map(int, right.split('.'))
+        for a, b in zip_longest(left_vars, right_vars, fillvalue = 0):
+            if a > b:
+                return -1
+            elif a < b:
+                return 1
+        return 0
 
     # TODO: Use retry decorator here
     @retry(Exception)
@@ -794,37 +840,38 @@ class STM32FirmwareMultiUpdater():
 
                         break
 
-            print(f"\r{self.__progress_bar(total_progress, 100)}", end="")
+            if len(self.stm32_updaters):
+                print(f"\r{self.__progress_bar(total_progress, 100)}", end="")
 
-            if self.ui:
-                if update_network_base:
-                    if self.ui.is_english:
-                        self.ui.update_network_stm32.setText(
-                            f"Network STM32 update is in progress. "
-                            f"({int(total_progress)}%)"
-                        )
+                if self.ui:
+                    if update_network_base:
+                        if self.ui.is_english:
+                            self.ui.update_network_stm32.setText(
+                                f"Network STM32 update is in progress. "
+                                f"({int(total_progress)}%)"
+                            )
+                        else:
+                            self.ui.update_network_stm32.setText(
+                                f"네트워크 모듈 초기화가 진행중입니다. "
+                                f"({int(total_progress)}%)"
+                            )
                     else:
-                        self.ui.update_network_stm32.setText(
-                            f"네트워크 모듈 초기화가 진행중입니다. "
-                            f"({int(total_progress)}%)"
-                        )
-                else:
-                    if self.ui.is_english:
-                        self.ui.update_stm32_modules.setText(
-                            f"STM32 modules update is in progress. "
-                            f"({int(total_progress)}%)"
-                        )
-                    else:
-                        self.ui.update_stm32_modules.setText(
-                            f"모듈 초기화가 진행중입니다. "
-                            f"({int(total_progress)}%)"
-                        )
+                        if self.ui.is_english:
+                            self.ui.update_stm32_modules.setText(
+                                f"STM32 modules update is in progress. "
+                                f"({int(total_progress)}%)"
+                            )
+                        else:
+                            self.ui.update_stm32_modules.setText(
+                                f"모듈 초기화가 진행중입니다. "
+                                f"({int(total_progress)}%)"
+                            )
 
-            if self.list_ui:
-                self.list_ui.total_progress_signal.emit(total_progress)
-                self.list_ui.total_status_signal.emit("Uploading...")
+                if self.list_ui:
+                    self.list_ui.total_progress_signal.emit(total_progress)
+                    self.list_ui.total_status_signal.emit("Uploading...")
 
-            time.sleep(0.001)
+            time.sleep(0.05)
 
             if is_done:
                 break
