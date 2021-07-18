@@ -70,7 +70,7 @@ class PopupMessageBox(QtWidgets.QMessageBox):
             self.setIcon(self.Icon.Information)
             self.setText("WARNING")
             self.addButton("Ok", self.ActionRole)
-            # restart_btn.clicked.connect(self.restart_btn)
+            restart_btn.clicked.connect(self.restart_btn)
 
         func = {
             "error": error_popup,
@@ -361,6 +361,8 @@ class Form(QDialog):
         self.stm32_update_list_form.ui.show()
         stm32_updater = STM32FirmwareMultiUpdater()
         stm32_updater.set_ui(self.ui, self.stm32_update_list_form)
+        # stm32_updater = STM32FirmwareUpdater()
+        # stm32_updater.set_ui(self.ui)
         th.Thread(
             target=stm32_updater.update_module_firmware,
             args=(True,),
@@ -935,14 +937,32 @@ class STM32UpdateListForm(QDialog):
             self.ui_icon_list[i].setPixmap(pixmap)
             self.ui_port_list[i].setText(device)
 
-    def current_module_changed(self, name, module_type):
+    def set_network_state(self, name, state):
         for i, ui_port in enumerate(self.ui_port_list):
             if ui_port.text() == name:
-                icon_path = os.path.join(self.component_path, "modules", module_type + "_28.png")
                 pixmap = QtGui.QPixmap()
-                pixmap.load(icon_path)
-                self.ui_current_icon_list[i].setPixmap(pixmap)
+                if state == -1:
+                    icon_path = os.path.join(self.component_path, "modules", "network_error.png")
+                    pixmap.load(icon_path)
+                elif state == 0:
+                    icon_path = os.path.join(self.component_path, "modules", "network.png")
+                    pixmap.load(icon_path)
+                else:
+                    icon_path = os.path.join(self.component_path, "modules", "network_reconnect.png")
+                    pixmap.load(icon_path)
+
+                self.ui_icon_list[i].setPixmap(pixmap)
                 break
+
+    def current_module_changed(self, name, module_type):
+        if module_type:
+            for i, ui_port in enumerate(self.ui_port_list):
+                if ui_port.text() == name:
+                    icon_path = os.path.join(self.component_path, "modules", module_type + "_28.png")
+                    pixmap = QtGui.QPixmap()
+                    pixmap.load(icon_path)
+                    self.ui_current_icon_list[i].setPixmap(pixmap)
+                    break
 
     def progress_value_changed(self, name, current, total):
         for i, ui_port in enumerate(self.ui_port_list):

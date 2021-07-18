@@ -12,6 +12,7 @@ from urllib.error import URLError
 from itertools import zip_longest
 
 import serial
+import serial.tools.list_ports as stl
 
 from modi_firmware_updater.util.connection_util import list_modi_ports
 from modi_firmware_updater.util.connection_util import SerTask
@@ -72,6 +73,15 @@ class STM32FirmwareUpdater:
         self.ui = None
         self.module_type = None
         self.progress = None
+        self.popup_reconnect = False
+        self.raise_error_message = True
+        self.update_error = 0
+        self.update_error_message = ""
+
+        for device in stl.comports():
+            if self.name == device.name:
+                self.location = device.location
+                break
 
         self.request_network_id()
 
@@ -86,6 +96,9 @@ class STM32FirmwareUpdater:
 
     def set_print(self, print):
         self.print = print
+
+    def set_raise_error(self, raise_error_message):
+        self.raise_error_message = raise_error_message
 
     def request_network_id(self):
         self.__conn.send_nowait(
@@ -144,6 +157,7 @@ class STM32FirmwareUpdater:
         self.update_event.wait()
         self.__print("Module firmwares have been updated!")
         self.close()
+        self.update_error = 1
 
     def close(self):
         self.__running = False
@@ -156,27 +170,49 @@ class STM32FirmwareUpdater:
         else:
             return SerTask()
 
-    def _reconnect_serial_connection(self, modi_num):
-        while True:
-            time.sleep(0.1)
-            disconnect = False
-            if not list_modi_ports():
-                disconnect = True
-            if disconnect:
-                if modi_num == len(list_modi_ports()):
-                    self.__reinitialize_serial_connection()
-                    break
-
     def reinitialize_serial_connection(self, reinit_mode=1):
-        if self.ui and self.update_network_base and reinit_mode == 2:
-            modi_num = len(list_modi_ports())
-            self.ui.stream.thread_signal.connect(self.ui.popup)
-            self.ui.stream.thread_signal.emit(self)
-            th.Thread(
-                target=self._reconnect_serial_connection,
-                args=(modi_num,),
-                daemon=True
-            ).start()
+        if self.update_network_base and reinit_mode == 2:
+            self.close()
+            time.sleep(1)
+
+            # popup reconnect message
+            self.popup_reconnect = True
+
+            # wait disconnect
+            self.__print("disconnect " + self.name)
+            while True:
+                is_disconnected = True
+                for port in stl.comports():
+                    if self.location == port.location:
+                        is_disconnected = False
+                if is_disconnected:
+                    break
+                time.sleep(0.1)
+
+            time.sleep(0.2)
+
+            self.__print("connect " + self.name)
+            # wait connect
+            while True:
+                is_connected = False
+                for port in stl.comports():
+                    if self.location == port.location:
+                        is_connected = True
+                        break
+                if is_connected:
+                    break
+                time.sleep(0.1)
+
+            time.sleep(0.2)
+
+            self.popup_reconnect = False
+
+            # reconnect
+            self.__print("try reconnect")
+            self.__conn = self.__open_conn()
+            self.__conn.open_conn()
+            self.__running = True
+            th.Thread(target=self.__read_conn, daemon=True).start()
         else:
             self.__reinitialize_serial_connection()
 
@@ -207,6 +243,11 @@ class STM32FirmwareUpdater:
     ) -> None:
         # Remove firmware of MODI modules (Removes EndFlash)
         if is_network:
+            if self.network_version and self.__compare_version(self.network_version, "1.2.1") != -1:
+                print("network version is " + self.network_version)
+                print("need to reconnect")
+                reinit_mode = 2
+
             firmware_update_message = self.__set_network_state(
                 module_id, 4, Module.PNP_OFF
             )
@@ -376,6 +417,7 @@ class STM32FirmwareUpdater:
                 if not crc_page_success:
                     page_begin -= page_size
                 time.sleep(0.01)
+        self.progress = 100
         self.__print(f"\rUpdating {module_type} ({module_id}) {self.__progress_bar(1, 1)} 100%")
 
         # Get version info from version_path, using appropriate methods
@@ -660,13 +702,21 @@ class STM32FirmwareUpdater:
 
             # If timed-out
             if response_wait_time > response_timeout:
-                raise Exception("Response timed-out")
+                self.update_error_message = "Response timed-out"
+                if self.raise_error_message:
+                    raise Exception(self.update_error_message)
+                else:
+                    self.update_error = -1
 
             # If error is raised
             if self.response_error_flag:
                 self.response_error_count += 1
                 if self.response_error_count > max_response_error_count:
-                    raise Exception("Response Errored")
+                    self.update_error_message = "Response Errored"
+                    if self.raise_error_message:
+                        raise Exception(self.update_error_message)
+                    else:
+                        self.update_error = -1
                 self.response_error_flag = False
                 return False
 
@@ -765,29 +815,31 @@ class STM32FirmwareMultiUpdater():
 
     def update_module_firmware(self, update_network_base=False):
         self.stm32_updaters = []
+        self.device_list = []
         self.modi_ports = list_modi_ports()
         if not self.modi_ports:
             raise serial.SerialException("No MODI port is connected")
-        
-        device_list = []
+
         for i, modi_port in enumerate(self.modi_ports):
             if i > 9:
                 break
             try:
-                if self.list_ui:
-                    device_list.append(modi_port.device)
                 self.stm32_updaters.append(STM32FirmwareUpdater(port = modi_port.device))
             except Exception:
                 print('Next network module')
 
+        for stm32_updater in self.stm32_updaters:
+            self.device_list.append(stm32_updater.location)
+
         if self.list_ui:
-            self.list_ui.set_device_list(device_list)
+            self.list_ui.set_device_list(self.device_list)
             self.list_ui.ui.close_button.setEnabled(False)
 
         self.update_in_progress = True
 
         for stm32_updater in self.stm32_updaters:
             stm32_updater.set_print(False)
+            stm32_updater.set_raise_error(False)
             th.Thread(
                 target=stm32_updater.update_module_firmware,
                 args=(update_network_base, ),
@@ -795,50 +847,65 @@ class STM32FirmwareMultiUpdater():
             ).start()
 
         num_to_update = {}
-        # wait
-        while True:
-            is_ready = True
-            for stm32_updater in self.stm32_updaters:
-                is_ready = is_ready and stm32_updater.update_in_progress
-                if stm32_updater.modules_to_update:
-                    num_to_update[stm32_updater.name] = len(stm32_updater.modules_to_update) + 1
-
-            if is_ready:
-                break
-            time.sleep(0.1)
+        if not update_network_base:
+            while True:
+                is_ready = True
+                for stm32_updater in self.stm32_updaters:
+                    is_ready = is_ready and stm32_updater.update_in_progress
+                    if stm32_updater.modules_to_update:
+                        num_to_update[stm32_updater.location] = len(stm32_updater.modules_to_update) + 1
+                if is_ready:
+                    break
+                time.sleep(0.1)
 
         while True:
             is_done = True
-
+            total_progress = 0
             for stm32_updater in self.stm32_updaters:
-                is_done  = is_done and (not stm32_updater.update_in_progress)
-                total_progress = 0
-                for i, ui_port in enumerate(self.list_ui.ui_port_list):
-                    if ui_port.text() == stm32_updater.name:
-                        if (stm32_updater.name != None) and (stm32_updater.module_type != None):
-                            if self.list_ui:
-                                self.list_ui.current_module_changed(stm32_updater.name, stm32_updater.module_type)
-                            
-                            if update_network_base:
-                                if stm32_updater.progress:
+                if self.list_ui and update_network_base:
+                    if stm32_updater.popup_reconnect:
+                        self.list_ui.set_network_state(stm32_updater.location, 1)
+                    else:
+                        self.list_ui.set_network_state(stm32_updater.location, 0)
+
+                if stm32_updater.update_error == 0:
+                    is_done = is_done & False
+                    for i, device in enumerate(self.device_list):
+                        if device == stm32_updater.location:
+                            current_module_progress = 0
+                            total_module_progress = 0
+
+                            if stm32_updater.progress:
+                                if update_network_base:
                                     current_module_progress = stm32_updater.progress
                                     total_module_progress = stm32_updater.progress
-                                    total_progress += total_module_progress
-                                    if self.list_ui:
-                                        self.list_ui.progress_signal.emit(stm32_updater.name, current_module_progress, total_module_progress)
-
-                            else:
-                                if stm32_updater.progress and stm32_updater.modules_updated:
+                                    total_progress += total_module_progress / len(self.stm32_updaters)
+                                else:
                                     current_module_progress = stm32_updater.progress
-                                    total_num = num_to_update[stm32_updater.name]
+                                    if num_to_update.get(stm32_updater.location):
+                                        total_num = num_to_update[stm32_updater.location]
+                                    else:
+                                        total_num = 1
                                     updated = (len(stm32_updater.modules_updated) - 1) / total_num * 100
                                     current = (current_module_progress) / total_num
                                     total_module_progress = updated + current
-                                    total_progress += total_module_progress
-                                    if self.list_ui:
-                                        self.list_ui.progress_signal.emit(stm32_updater.name, current_module_progress, total_module_progress)
+                                    total_progress += total_module_progress / len(self.stm32_updaters)
 
-                        break
+                            if self.list_ui:
+                                self.list_ui.current_module_changed(stm32_updater.location, stm32_updater.module_type)
+                                self.list_ui.progress_signal.emit(stm32_updater.location, current_module_progress, total_module_progress)
+                            break
+                else:
+                    if stm32_updater.update_error == 1:
+                        # print("complete " + stm32_updater.location)
+                        if self.list_ui:
+                            self.list_ui.set_network_state(stm32_updater.location, 0)
+                            self.list_ui.progress_signal.emit(stm32_updater.location, 100, 100)
+                            total_progress += 100 / len(self.stm32_updaters)
+                    else:
+                        # print("error " + stm32_updater.location)
+                        if self.list_ui:
+                            self.list_ui.set_network_state(stm32_updater.location, -1)
 
             if len(self.stm32_updaters):
                 print(f"\r{self.__progress_bar(total_progress, 100)}", end="")
@@ -846,35 +913,23 @@ class STM32FirmwareMultiUpdater():
                 if self.ui:
                     if update_network_base:
                         if self.ui.is_english:
-                            self.ui.update_network_stm32.setText(
-                                f"Network STM32 update is in progress. "
-                                f"({int(total_progress)}%)"
-                            )
+                            self.ui.update_network_stm32.setText(f"Network STM32 update is in progress. ({int(total_progress)}%)")
                         else:
-                            self.ui.update_network_stm32.setText(
-                                f"네트워크 모듈 초기화가 진행중입니다. "
-                                f"({int(total_progress)}%)"
-                            )
+                            self.ui.update_network_stm32.setText(f"네트워크 모듈 초기화가 진행중입니다. ({int(total_progress)}%)")
                     else:
                         if self.ui.is_english:
-                            self.ui.update_stm32_modules.setText(
-                                f"STM32 modules update is in progress. "
-                                f"({int(total_progress)}%)"
-                            )
+                            self.ui.update_stm32_modules.setText(f"STM32 modules update is in progress. ({int(total_progress)}%)")
                         else:
-                            self.ui.update_stm32_modules.setText(
-                                f"모듈 초기화가 진행중입니다. "
-                                f"({int(total_progress)}%)"
-                            )
+                            self.ui.update_stm32_modules.setText(f"모듈 초기화가 진행중입니다. ({int(total_progress)}%)")
 
                 if self.list_ui:
                     self.list_ui.total_progress_signal.emit(total_progress)
                     self.list_ui.total_status_signal.emit("Uploading...")
 
-            time.sleep(0.05)
-
             if is_done:
                 break
+
+            time.sleep(0.05)
 
         self.update_in_progress = False
 
@@ -920,8 +975,8 @@ class STM32FirmwareMultiUpdater():
             self.list_ui.total_progress_signal.emit(100)
             for stm32_updater in self.stm32_updaters:
                 for i, ui_port in enumerate(self.list_ui.ui_port_list):
-                    if ui_port.text() == stm32_updater.name:
-                        self.list_ui.progress_signal.emit(stm32_updater.name, 100, 100)
+                    if ui_port.text() == stm32_updater.location:
+                        self.list_ui.progress_signal.emit(stm32_updater.location, 100, 100)
                         break
 
         print("\nSTM firmware update is complete!!")

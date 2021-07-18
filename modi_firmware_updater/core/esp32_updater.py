@@ -12,6 +12,7 @@ from os import path
 from urllib.error import URLError
 
 import serial
+import serial.tools.list_ports as stl
 
 from modi_firmware_updater.util.connection_util import list_modi_ports
 
@@ -82,11 +83,18 @@ class ESP32FirmwareUpdater(serial.Serial):
         self.current_sequence = 0
         self.total_sequence = 0
 
+        self.raise_error_message = True
+        self.update_error = 0
+        self.update_error_message = ""
+
     def set_ui(self, ui):
         self.ui = ui
 
     def set_print(self, print):
         self.print = print
+
+    def set_raise_error(self, raise_error_message):
+        self.raise_error_message = raise_error_message
 
     def update_firmware(self, update_interpreter=False, force=False):
         if update_interpreter:
@@ -110,17 +118,11 @@ class ESP32FirmwareUpdater(serial.Serial):
             self.close()
 
             if self.ui:
-                self.ui.update_stm32_modules.setStyleSheet(
-                    f"border-image: url({self.ui.active_path}); font-size: 16px"
-                )
+                self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
                 self.ui.update_stm32_modules.setEnabled(True)
-                self.ui.update_network_stm32.setStyleSheet(
-                    f"border-image: url({self.ui.active_path}); font-size: 16px"
-                )
+                self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
                 self.ui.update_network_stm32.setEnabled(True)
-                self.ui.update_network_esp32.setStyleSheet(
-                    f"border-image: url({self.ui.active_path}); font-size: 16px"
-                )
+                self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
                 self.ui.update_network_esp32.setEnabled(True)
                 if self.ui.is_english:
                     self.ui.update_network_esp32_interpreter.setText("Update Network ESP32 Interpreter")
@@ -137,10 +139,7 @@ class ESP32FirmwareUpdater(serial.Serial):
             self.version = self.__get_esp_version()
             if self.version and self.version == self.__version_to_update:
                 if not force and not self.ui:
-                    response = input(
-                        f"ESP version already up to date (v{self.version})."
-                        f" Do you still want to proceed? [y/n]: "
-                    )
+                    response = input(f"ESP version already up to date (v{self.version}). Do you still want to proceed? [y/n]: ")
                     if "y" not in response:
                         return
 
@@ -168,17 +167,11 @@ class ESP32FirmwareUpdater(serial.Serial):
             self.close()
 
             if self.ui:
-                self.ui.update_stm32_modules.setStyleSheet(
-                    f"border-image: url({self.ui.active_path}); font-size: 16px"
-                )
+                self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
                 self.ui.update_stm32_modules.setEnabled(True)
-                self.ui.update_network_stm32.setStyleSheet(
-                    f"border-image: url({self.ui.active_path}); font-size: 16px"
-                )
+                self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
                 self.ui.update_network_stm32.setEnabled(True)
-                self.ui.update_network_esp32_interpreter.setStyleSheet(
-                    f"border-image: url({self.ui.active_path}); font-size: 16px"
-                )
+                self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
                 self.ui.update_network_esp32_interpreter.setEnabled(True)
                 if self.ui.is_english:
                     self.ui.update_network_esp32.setText("Update Network ESP32")
@@ -220,21 +213,11 @@ class ESP32FirmwareUpdater(serial.Serial):
         param_data[1] = self.SPI_FLASH_SET
         param_data[2] = 0x18
         param_data[8:12] = int.to_bytes(fl_id, length=4, byteorder="little")
-        param_data[12:16] = int.to_bytes(
-            total_size, length=4, byteorder="little"
-        )
-        param_data[16:20] = int.to_bytes(
-            block_size, length=4, byteorder="little"
-        )
-        param_data[20:24] = int.to_bytes(
-            sector_size, length=4, byteorder="little"
-        )
-        param_data[24:28] = int.to_bytes(
-            page_size, length=4, byteorder="little"
-        )
-        param_data[28:32] = int.to_bytes(
-            status_mask, length=4, byteorder="little"
-        )
+        param_data[12:16] = int.to_bytes(total_size, length=4, byteorder="little")
+        param_data[16:20] = int.to_bytes(block_size, length=4, byteorder="little")
+        param_data[20:24] = int.to_bytes(sector_size, length=4, byteorder="little")
+        param_data[24:28] = int.to_bytes(page_size, length=4, byteorder="little")
+        param_data[28:32] = int.to_bytes(status_mask, length=4, byteorder="little")
         param_pkt = self.__parse_pkt(param_data)
         self.__send_pkt(param_pkt, timeout=10)
         self.__print("Parameter set complete")
@@ -266,12 +249,20 @@ class ESP32FirmwareUpdater(serial.Serial):
                 recv_cmd = bytearray(recv_pkt)[2]
                 if cmd == recv_cmd:
                     if bytearray(recv_pkt)[1] != 0x01:
-                        raise Exception
+                        self.update_error_message = "Packet error"
+                        if self.raise_error_message:
+                            raise Exception(self.update_error_message)
+                        else:
+                            self.update_error = -1
                     return True
                 elif continuous:
                     self.__send_pkt(pkt, wait=False)
             self.__print("Sending Again...")
-            raise Exception("Timeout Expired!")
+            self.update_error_message = "Timeout Expired!"
+            if self.raise_error_message:
+                raise Exception(self.update_error_message)
+            else:
+                self.update_error = -1
 
     def __read_slip(self):
         slip_pkt = b""
@@ -341,55 +332,30 @@ class ESP32FirmwareUpdater(serial.Serial):
         for i, bin_path in enumerate(self.file_path):
             if self.ui:
                 if sys.platform.startswith("win"):
-                    root_path = pathlib.PurePosixPath(
-                        pathlib.PurePath(__file__),
-                        "..",
-                        "..",
-                        "assets",
-                        "firmware",
-                        "latest",
-                        "esp32",
-                    )
+                    root_path = pathlib.PurePosixPath(pathlib.PurePath(__file__),"..", "..", "assets", "firmware", "latest", "esp32")
                 else:
-                    root_path = path.join(
-                        path.dirname(__file__),
-                        "..",
-                        "assets",
-                        "firmware",
-                        "latest",
-                        "esp32",
-                    )
+                    root_path = path.join(path.dirname(__file__), "..", "assets", "firmware", "latest", "esp32")
 
                 if sys.platform.startswith("win"):
-                    firmware_path = pathlib.PurePosixPath(
-                        root_path, bin_path
-                    )
+                    firmware_path = pathlib.PurePosixPath(root_path, bin_path)
                 else:
                     firmware_path = path.join(root_path, bin_path)
                 if self.ui.installation:
-                    firmware_path = path.dirname(__file__).replace(
-                        "core", bin_path
-                    )
+                    firmware_path = path.dirname(__file__).replace("core", bin_path)
                 with open(firmware_path, "rb") as bin_file:
                     bin_data = bin_file.read()
             else:
-                root_path = path.join(
-                    path.dirname(__file__), "..", "assets", "firmware", "latest", "esp32"
-                )
+                root_path = path.join(path.dirname(__file__), "..", "assets", "firmware", "latest", "esp32")
                 firmware_path = path.join(root_path, bin_path)
                 with open(firmware_path, "rb") as bin_file:
                     bin_data = bin_file.read()
             binary_firmware += bin_data
             if i < len(self.__address) - 1:
-                binary_firmware += b"\xFF" * (
-                    self.__address[i + 1] - self.__address[i] - len(bin_data)
-                )
+                binary_firmware += b"\xFF" * (self.__address[i + 1] - self.__address[i] - len(bin_data))
         return binary_firmware
 
     def __get_latest_version(self):
-        root_path = path.join(
-            path.dirname(__file__), "..", "assets", "firmware", "latest", "esp32"
-        )
+        root_path = path.join(path.dirname(__file__), "..", "assets", "firmware", "latest", "esp32")
         version_path = path.join(root_path, "esp_version.txt")
         with open(version_path, "r") as version_file:
             version_info = version_file.readline().lstrip("v").rstrip("\n")
@@ -401,12 +367,8 @@ class ESP32FirmwareUpdater(serial.Serial):
         erase_data[1] = self.ESP_FLASH_BEGIN
         erase_data[2] = 0x10
         erase_data[8:12] = int.to_bytes(size, length=4, byteorder="little")
-        erase_data[12:16] = int.to_bytes(
-            num_blocks, length=4, byteorder="little"
-        )
-        erase_data[16:20] = int.to_bytes(
-            self.ESP_FLASH_BLOCK, length=4, byteorder="little"
-        )
+        erase_data[12:16] = int.to_bytes(num_blocks, length=4, byteorder="little")
+        erase_data[16:20] = int.to_bytes(self.ESP_FLASH_BLOCK, length=4, byteorder="little")
         erase_data[20:24] = int.to_bytes(offset, length=4, byteorder="little")
         erase_pkt = self.__parse_pkt(erase_data)
         self.__send_pkt(erase_pkt, timeout=10)
@@ -419,9 +381,7 @@ class ESP32FirmwareUpdater(serial.Serial):
         block_data[1] = self.ESP_FLASH_DATA
         block_data[2:4] = int.to_bytes(size + 16, length=2, byteorder="little")
         block_data[8:12] = int.to_bytes(size, length=4, byteorder="little")
-        block_data[12:16] = int.to_bytes(
-            seq_block, length=4, byteorder="little"
-        )
+        block_data[12:16] = int.to_bytes(seq_block, length=4, byteorder="little")
         for i in range(size):
             block_data[24 + i] = data[i]
             checksum ^= 0xFF & data[i]
@@ -444,23 +404,15 @@ class ESP32FirmwareUpdater(serial.Serial):
         self.current_sequence = blocks_downloaded
         self.__print("Start uploading firmware data...")
         for seq, chunk in enumerate(chunk_queue):
-            self.__erase_chunk(
-                len(chunk), self.__address[0] + seq * self.ESP_FLASH_CHUNK
-            )
-            blocks_downloaded += self.__write_chunk(
-                chunk, blocks_downloaded, self.total_sequence, manager
-            )
+            self.__erase_chunk(len(chunk), self.__address[0] + seq * self.ESP_FLASH_CHUNK)
+            blocks_downloaded += self.__write_chunk(chunk, blocks_downloaded, self.total_sequence, manager)
         if manager:
             manager.quit()
         if self.ui:
             if self.ui.is_english:
-                self.ui.update_network_esp32.setText(
-                    "Network ESP32 update is in progress. (100%)"
-                )
+                self.ui.update_network_esp32.setText("Network ESP32 update is in progress. (100%)")
             else:
-                self.ui.update_network_esp32.setText(
-                    "네트워크 모듈 업데이트가 진행중입니다. (100%)"
-                )
+                self.ui.update_network_esp32.setText("네트워크 모듈 업데이트가 진행중입니다. (100%)")
         self.current_sequence = 1
         self.total_sequence = 1
         self.__print(f"\r{self.__progress_bar(1, 1)}")
@@ -481,15 +433,9 @@ class ESP32FirmwareUpdater(serial.Serial):
                 manager.status = self.__progress_bar(curr_seq + seq, total_seq)
             if self.ui:
                 if self.ui.is_english:
-                    self.ui.update_network_esp32.setText(
-                        f"Network ESP32 update is in progress. "
-                        f"({int((curr_seq+seq)/total_seq*100)}%)"
-                    )
+                    self.ui.update_network_esp32.setText(f"Network ESP32 update is in progress. ({int((curr_seq+seq)/total_seq*100)}%)")
                 else:
-                    self.ui.update_network_esp32.setText(
-                        f"네트워크 모듈 업데이트가 진행중입니다. "
-                        f"({int((curr_seq+seq)/total_seq*100)}%)"
-                    )
+                    self.ui.update_network_esp32.setText(f"네트워크 모듈 업데이트가 진행중입니다. ({int((curr_seq+seq)/total_seq*100)}%)")
             self.__print(
                 f"\r{self.__progress_bar(curr_seq + seq, total_seq)}", end=""
             )
@@ -629,17 +575,11 @@ class ESP32FirmwareMultiUpdater():
 
         if update_interpreter:
             if self.ui:
-                self.ui.update_stm32_modules.setStyleSheet(
-                    f"border-image: url({self.ui.active_path}); font-size: 16px"
-                )
+                self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
                 self.ui.update_stm32_modules.setEnabled(True)
-                self.ui.update_network_stm32.setStyleSheet(
-                    f"border-image: url({self.ui.active_path}); font-size: 16px"
-                )
+                self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
                 self.ui.update_network_stm32.setEnabled(True)
-                self.ui.update_network_esp32.setStyleSheet(
-                    f"border-image: url({self.ui.active_path}); font-size: 16px"
-                )
+                self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
                 self.ui.update_network_esp32.setEnabled(True)
                 if self.ui.is_english:
                     self.ui.update_network_esp32_interpreter.setText("Update Network ESP32 Interpreter")
@@ -647,17 +587,11 @@ class ESP32FirmwareMultiUpdater():
                     self.ui.update_network_esp32_interpreter.setText("네트워크 모듈 인터프리터 초기화")
         else:
             if self.ui:
-                self.ui.update_stm32_modules.setStyleSheet(
-                    f"border-image: url({self.ui.active_path}); font-size: 16px"
-                )
+                self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
                 self.ui.update_stm32_modules.setEnabled(True)
-                self.ui.update_network_stm32.setStyleSheet(
-                    f"border-image: url({self.ui.active_path}); font-size: 16px"
-                )
+                self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
                 self.ui.update_network_stm32.setEnabled(True)
-                self.ui.update_network_esp32_interpreter.setStyleSheet(
-                    f"border-image: url({self.ui.active_path}); font-size: 16px"
-                )
+                self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
                 self.ui.update_network_esp32_interpreter.setEnabled(True)
                 if self.ui.is_english:
                     self.ui.update_network_esp32.setText("Update Network ESP32")
