@@ -839,9 +839,21 @@ class STM32FirmwareMultiUpdater():
 
         num_to_update = {}
         if not update_network_base:
+            ready_count = {}
+            for stm32_updater in self.stm32_updaters:
+                ready_count[stm32_updater.location] = 0.0
+
             while True:
                 is_ready = True
                 for stm32_updater in self.stm32_updaters:
+                    if not stm32_updater.update_in_progress:
+                        ready_count[stm32_updater.location] += 0.1
+
+                        if ready_count[stm32_updater.location] > 5:
+                            print(stm32_updater.name + " timeout reconnect")
+                            stm32_updater.reinitialize_serial_connection()
+                            ready_count[stm32_updater.location] = 0
+
                     is_ready = is_ready and stm32_updater.update_in_progress
                     if stm32_updater.modules_to_update:
                         num_to_update[stm32_updater.location] = len(stm32_updater.modules_to_update) + 1
