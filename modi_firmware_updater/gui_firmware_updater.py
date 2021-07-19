@@ -5,21 +5,14 @@ import sys
 import threading as th
 import time
 import traceback as tb
-import io
-import urllib.request as ur
-import zipfile
-import shutil
-from io import open
-from os import path
-from urllib.error import URLError
 
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QDialog
 
+from modi_firmware_updater.util.connection_util import list_modi_ports
 from modi_firmware_updater.core.esp32_updater import ESP32FirmwareMultiUpdater
 from modi_firmware_updater.core.stm32_updater import STM32FirmwareMultiUpdater
-from modi_firmware_updater.core.stm32_updater import STM32FirmwareUpdater
 
 
 class StdoutRedirect(QObject):
@@ -248,27 +241,8 @@ class Form(QDialog):
         self.ui.stream = self.stream
         self.ui.popup = self._thread_signal_hook
 
-        # Check module firmware
-        self.local_firmware_path = path.join(path.dirname(__file__), "assets", "firmware", "latest")
-        # module
-        self.local_module_firmware_path = path.join(self.local_firmware_path, "stm32")
-        self.local_module_version_path = path.join(self.local_module_firmware_path, "version.txt")
-        self.latest_module_firmware_path = "https://download.luxrobo.com/modi-skeleton/skeleton.zip"
-        self.latest_module_version_path = "https://download.luxrobo.com/modi-skeleton/version.txt"
-        # network base
-        self.local_network_firmware_path = path.join(self.local_firmware_path, "stm32")
-        self.local_network_version_path = path.join(self.local_network_firmware_path, "base_version.txt")
-        self.latest_network_firmware_path = "https://download.luxrobo.com/modi-network-os/network.zip"
-        self.latest_network_version_path = "https://download.luxrobo.com/modi-network-os/version.txt"
-        #esp32
-        self.local_esp32_firmware_path = path.join(self.local_firmware_path, "esp32")
-        self.local_esp32_version_path = path.join(self.local_esp32_firmware_path, "esp_version.txt")
-        self.latest_esp32_firmware_path = [
-            "https://download.luxrobo.com/modi-ota-firmware/ota.zip",
-            "https://download.luxrobo.com/modi-esp32-firmware/esp.zip",
-        ]
-        self.latest_esp32_version_path = "https://download.luxrobo.com/modi-esp32-firmware/version.txt"
-        self.check_module_firmware()
+        # for kyowon
+        self.ui.update_network_stm32.setVisible(False)
 
         # Set Button Status
         self.translate_button_text()
@@ -334,12 +308,18 @@ class Form(QDialog):
         th.Thread(
             target=self.__click_motion, args=(2, button_start), daemon=True
         ).start()
+
+        modi_ports = list_modi_ports()
+        if not modi_ports:
+            raise Exception("No MODI port is connected")
+
         self.stm32_update_list_form.reset_device_list()
         self.stm32_update_list_form.ui.show()
         stm32_updater = STM32FirmwareMultiUpdater()
         stm32_updater.set_ui(self.ui, self.stm32_update_list_form)
         th.Thread(
             target=stm32_updater.update_module_firmware,
+            args=(modi_ports, ),
             daemon=True
         ).start()
         self.firmware_updater = stm32_updater
@@ -358,11 +338,8 @@ class Form(QDialog):
             target=self.__click_motion, args=(3, button_start), daemon=True
         ).start()
         self.stm32_update_list_form.reset_device_list()
-        self.stm32_update_list_form.ui.show()
         stm32_updater = STM32FirmwareMultiUpdater()
         stm32_updater.set_ui(self.ui, self.stm32_update_list_form)
-        # stm32_updater = STM32FirmwareUpdater()
-        # stm32_updater.set_ui(self.ui)
         th.Thread(
             target=stm32_updater.update_module_firmware,
             args=(True,),
@@ -417,190 +394,6 @@ class Form(QDialog):
         for i, button in enumerate(self.buttons):
             button.setText(appropriate_translation[i])
 
-    def check_module_firmware(self):
-        if not os.path.exists(self.local_firmware_path):
-            os.mkdir(self.local_firmware_path)
-
-        self.__check_module_version()
-        self.__check_network_base_version()
-        self.__check_esp32_version()
-
-    def __download_module_firmware(self):
-        try:
-            # read latest version
-            with ur.urlopen(self.latest_module_version_path, timeout=5) as conn:
-                last_version_name = conn.read().decode("utf8")
-
-            # skeleton update
-            with ur.urlopen(self.latest_module_firmware_path, timeout=5) as conn:
-                module_name = [
-                    "button",
-                    "dial",
-                    "display",
-                    "environment",
-                    "gyro",
-                    "ir",
-                    "led",
-                    "mic",
-                    "motor",
-                    "speaker",
-                    "ultrasonic"
-                ]
-                download_response = conn.read()
-                zip_content = zipfile.ZipFile(io.BytesIO(download_response), "r")
-
-                for i, module in enumerate(module_name):
-                    src_path = module + "/Base_module.bin"
-                    bin_buffer = zip_content.read(src_path)
-                    
-                    if module == "environment":
-                        dest_path = path.join(self.local_module_firmware_path, "env" + ".bin")
-                    else:
-                        dest_path = path.join(self.local_module_firmware_path, module + ".bin")
-                    
-                    with open(dest_path, "wb") as data_file:
-                        data_file.write(bin_buffer)
-
-            # version update
-            with open(path.join(self.local_module_firmware_path, "version.txt"), "w") as data_file:
-                data_file.write(last_version_name)
-
-            return True
-
-        except URLError:
-            return False
-
-    def __download_network_firmware(self):
-        try:
-            # read latest version
-            with ur.urlopen(self.latest_network_version_path, timeout=5) as conn:
-                last_version_name = conn.read().decode("utf8")
-
-            # network base update
-            with ur.urlopen(self.latest_network_firmware_path, timeout=5) as conn:
-                download_response = conn.read()
-                zip_content = zipfile.ZipFile(io.BytesIO(download_response), "r")
-
-                with open(path.join(self.local_network_firmware_path, "network.bin"), "wb") as data_file:
-                    data_file.write(zip_content.read("network.bin"))
-
-            # version update
-            with open(path.join(self.local_network_firmware_path, "base_version.txt"), "w") as data_file:
-                data_file.write(last_version_name)
-
-            return True
-
-        except URLError:
-            return False
-
-    def __download_esp32_firmware(self):
-        try:
-            # read latest version
-            with ur.urlopen(self.latest_esp32_version_path, timeout=5) as conn:
-                last_version_name = conn.read().decode("utf8")
-
-            # ota update
-            with ur.urlopen(self.latest_esp32_firmware_path[0], timeout=5) as conn:
-                download_response = conn.read()
-                zip_content = zipfile.ZipFile(io.BytesIO(download_response), "r")
-
-                with open(path.join(self.local_esp32_firmware_path, "modi_ota_factory.bin"), "wb") as data_file:
-                    data_file.write(zip_content.read("modi_ota_factory.bin"))
-
-                with open(path.join(self.local_esp32_firmware_path, "ota_data_initial.bin"), "wb") as data_file:
-                    data_file.write(zip_content.read("ota_data_initial.bin"))
-
-            # bootloader, partitions, esp32 update
-            with ur.urlopen(self.latest_esp32_firmware_path[1], timeout=5) as conn:
-                download_response = conn.read()
-                zip_content = zipfile.ZipFile(io.BytesIO(download_response), "r")
-
-                with open(path.join(self.local_esp32_firmware_path, "bootloader.bin"), "wb") as data_file:
-                    data_file.write(zip_content.read("bootloader.bin"))
-
-                with open(path.join(self.local_esp32_firmware_path, "partitions.bin"), "wb") as data_file:
-                    data_file.write(zip_content.read("partitions.bin"))
-
-                with open(path.join(self.local_esp32_firmware_path, "esp32.bin"), "wb") as data_file:
-                    data_file.write(zip_content.read("esp32.bin"))
-
-            # version update
-            with open(path.join(self.local_esp32_firmware_path, "esp_version.txt"), "w") as data_file:
-                data_file.write(last_version_name)
-
-            return True
-
-        except URLError:
-            return False
-
-    def __check_module_version(self):
-        try:
-            local_version_info = None
-            latest_version_info = None
-
-            with ur.urlopen(self.latest_module_version_path, timeout=5) as conn:
-                latest_version_name = conn.read().decode("utf8")
-                latest_version_info = latest_version_name.lstrip("v").rstrip("\n")
-
-            if os.path.exists(self.local_module_firmware_path):
-                with open(self.local_module_version_path) as version_file:
-                    local_version_info = version_file.readline().lstrip("v").rstrip("\n")
-            else:
-                os.mkdir(self.local_module_firmware_path)
-
-            if (local_version_info == None) or (local_version_info != latest_version_info):
-                self.__download_module_firmware()
-
-        except URLError:
-            if not os.path.exists(self.local_module_firmware_path):
-                assert_path = path.join(path.dirname(__file__), "assets", "firmware", "stm32")
-                shutil.copytree(assert_path, self.local_module_firmware_path)
-
-    def __check_network_base_version(self):
-        try:
-            local_version_info = None
-            latest_version_info = None
-
-            with ur.urlopen(self.latest_network_version_path, timeout=5) as conn:
-                latest_version_name = conn.read().decode("utf8")
-                latest_version_info = latest_version_name.lstrip("v").rstrip("\n")
-
-            if os.path.exists(self.local_network_firmware_path):
-                with open(self.local_module_version_path) as version_file:
-                    local_version_info = version_file.readline().lstrip("v").rstrip("\n")
-            else:
-                os.mkdir(self.local_network_firmware_path)
-
-            if (local_version_info == None) or (local_version_info != latest_version_info):
-                self.__download_network_firmware()
-
-        except URLError:
-            if not os.path.exists(self.local_network_firmware_path):
-                assert_path = path.join(path.dirname(__file__), "assets", "firmware", "stm32")
-                shutil.copytree(assert_path, self.local_network_firmware_path)
-
-    def __check_esp32_version(self):
-        try:
-            local_version_info = None
-            latest_version_info = None
-
-            with ur.urlopen(self.latest_esp32_version_path, timeout=5) as conn:
-                latest_version_name = conn.read().decode("utf8")
-                latest_version_info = latest_version_name.lstrip("v").rstrip("\n")
-
-            if os.path.exists(self.local_esp32_firmware_path):
-                with open(self.local_module_version_path) as version_file:
-                    local_version_info = version_file.readline().lstrip("v").rstrip("\n")
-            else:
-                os.mkdir(self.local_esp32_firmware_path)
-
-            if (local_version_info == None) or (local_version_info != latest_version_info):
-                self.__download_esp32_firmware()
-
-        except URLError:
-            if not os.path.exists(self.local_esp32_firmware_path):
-                assert_path = path.join(path.dirname(__file__), "assets", "firmware", "esp32")
-                shutil.copytree(assert_path, self.local_esp32_firmware_path)
     #
     # Helper functions
     #
@@ -801,6 +594,9 @@ class ESP32UpdateListForm(QDialog):
 
 class STM32UpdateListForm(QDialog):
 
+    network_state_signal = pyqtSignal(str, int)
+    network_id_signal = pyqtSignal(str, int)
+    current_module_changed_signal = pyqtSignal(str, str)
     progress_signal = pyqtSignal(str, int, int)
     total_progress_signal = pyqtSignal(int)
     total_status_signal = pyqtSignal(str)
@@ -848,6 +644,19 @@ class STM32UpdateListForm(QDialog):
             self.ui.port_8,
             self.ui.port_9,
             self.ui.port_10
+        ]
+
+        self.ui_network_id_list = [
+            self.ui.network_id_1,
+            self.ui.network_id_2,
+            self.ui.network_id_3,
+            self.ui.network_id_4,
+            self.ui.network_id_5,
+            self.ui.network_id_6,
+            self.ui.network_id_7,
+            self.ui.network_id_8,
+            self.ui.network_id_9,
+            self.ui.network_id_10,
         ]
 
         self.ui_current_progress_list = [
@@ -902,7 +711,11 @@ class STM32UpdateListForm(QDialog):
             self.ui.progress_total_value_10,
         ]
 
-        self.ui.close_button.clicked.connect(self.ui.close)
+        self.ui.close_button.clicked.connect(self.close_form)
+
+        self.network_state_signal.connect(self.set_network_state)
+        self.network_id_signal.connect(self.set_network_id)
+        self.current_module_changed_signal.connect(self.current_module_changed)
         self.progress_signal.connect(self.progress_value_changed)
         self.total_progress_signal.connect(self.total_progress_value_changed)
         self.total_status_signal.connect(self.total_progress_status_changed)
@@ -923,6 +736,7 @@ class STM32UpdateListForm(QDialog):
             self.ui_current_icon_list[i].setPixmap(current_icon_pixmap)
 
             self.ui_port_list[i].setText("not connected")
+            self.ui_network_id_list[i].setText("network id")
             self.ui_current_progress_list[i].setValue(0)
             self.ui_total_progress_list[i].setValue(0)
             self.ui_current_progress_value_list[i].setText("0%")
@@ -954,6 +768,12 @@ class STM32UpdateListForm(QDialog):
                 self.ui_icon_list[i].setPixmap(pixmap)
                 break
 
+    def set_network_id(self, name, id):
+        for i, ui_port in enumerate(self.ui_port_list):
+            if ui_port.text() == name:
+                self.ui_network_id_list[i].setText(hex(id))
+                break
+
     def current_module_changed(self, name, module_type):
         if module_type:
             for i, ui_port in enumerate(self.ui_port_list):
@@ -978,3 +798,6 @@ class STM32UpdateListForm(QDialog):
 
     def total_progress_status_changed(self, status):
         self.ui.total_status.setText(status)
+
+    def close_form(self):
+        self.ui.close()
