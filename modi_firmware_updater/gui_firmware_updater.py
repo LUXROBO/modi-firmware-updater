@@ -17,9 +17,9 @@ from PyQt5 import QtCore, QtGui, QtWidgets, uic
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QDialog
 
+from modi_firmware_updater.util.connection_util import list_modi_ports
 from modi_firmware_updater.core.esp32_updater import ESP32FirmwareMultiUpdater
 from modi_firmware_updater.core.stm32_updater import STM32FirmwareMultiUpdater
-from modi_firmware_updater.core.stm32_updater import STM32FirmwareUpdater
 
 
 class StdoutRedirect(QObject):
@@ -291,12 +291,19 @@ class Form(QDialog):
         th.Thread(
             target=self.__click_motion, args=(0, button_start), daemon=True
         ).start()
+
+
+        modi_ports = list_modi_ports()
+        if not modi_ports:
+            raise Exception("No MODI port is connected")
+
         self.esp32_update_list_form.reset_device_list()
         self.esp32_update_list_form.ui.show()
         esp32_updater = ESP32FirmwareMultiUpdater()
         esp32_updater.set_ui(self.ui, self.esp32_update_list_form)
         th.Thread(
             target=esp32_updater.update_firmware,
+            args=(modi_ports, ),
             daemon=True
         ).start()
         self.firmware_updater = esp32_updater
@@ -312,13 +319,18 @@ class Form(QDialog):
         th.Thread(
             target=self.__click_motion, args=(1, button_start), daemon=True
         ).start()
+
+        modi_ports = list_modi_ports()
+        if not modi_ports:
+            raise Exception("No MODI port is connected")
+
         self.esp32_update_list_form.reset_device_list()
         self.esp32_update_list_form.ui.show()
         esp32_updater = ESP32FirmwareMultiUpdater()
         esp32_updater.set_ui(self.ui, self.esp32_update_list_form)
         th.Thread(
             target=esp32_updater.update_firmware,
-            args=(True,),
+            args=(modi_ports, True,),
             daemon=True
         ).start()
         self.firmware_updater = esp32_updater
@@ -334,12 +346,18 @@ class Form(QDialog):
         th.Thread(
             target=self.__click_motion, args=(2, button_start), daemon=True
         ).start()
+
+        modi_ports = list_modi_ports()
+        if not modi_ports:
+            raise Exception("No MODI port is connected")
+
         self.stm32_update_list_form.reset_device_list()
         self.stm32_update_list_form.ui.show()
         stm32_updater = STM32FirmwareMultiUpdater()
         stm32_updater.set_ui(self.ui, self.stm32_update_list_form)
         th.Thread(
             target=stm32_updater.update_module_firmware,
+            args=(modi_ports, ),
             daemon=True
         ).start()
         self.firmware_updater = stm32_updater
@@ -349,23 +367,24 @@ class Form(QDialog):
         if self.firmware_updater and self.firmware_updater.update_in_progress:
             self.stm32_update_list_form.ui.show()
             return
-        self.ui.update_network_stm32.setStyleSheet(
-            f"border-image: url({self.pressed_path}); font-size: 16px"
-        )
+        self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.pressed_path}); font-size: 16px")
         self.ui.console.clear()
         print("STM32 Firmware Updater has been initialized for base update!")
         th.Thread(
             target=self.__click_motion, args=(3, button_start), daemon=True
         ).start()
+
+        modi_ports = list_modi_ports()
+        if not modi_ports:
+            raise Exception("No MODI port is connected")
+
         self.stm32_update_list_form.reset_device_list()
         self.stm32_update_list_form.ui.show()
         stm32_updater = STM32FirmwareMultiUpdater()
         stm32_updater.set_ui(self.ui, self.stm32_update_list_form)
-        # stm32_updater = STM32FirmwareUpdater()
-        # stm32_updater.set_ui(self.ui)
         th.Thread(
             target=stm32_updater.update_module_firmware,
-            args=(True,),
+            args=(modi_ports, True,),
             daemon=True,
         ).start()
         self.firmware_updater = stm32_updater
@@ -695,9 +714,11 @@ class Form(QDialog):
 
 class ESP32UpdateListForm(QDialog):
 
+    network_state_signal = pyqtSignal(str, int)
     progress_signal = pyqtSignal(str, int)
     total_progress_signal = pyqtSignal(int)
     total_status_signal = pyqtSignal(str)
+    error_message_signal = pyqtSignal(str, str)
 
     def __init__(self, ui_path, component_path):
         QDialog.__init__(self)
@@ -757,10 +778,26 @@ class ESP32UpdateListForm(QDialog):
             self.ui.progress_value_10,
         ]
 
+        self.ui_error_message_list = [
+            self.ui.error_message_1,
+            self.ui.error_message_2,
+            self.ui.error_message_3,
+            self.ui.error_message_4,
+            self.ui.error_message_5,
+            self.ui.error_message_6,
+            self.ui.error_message_7,
+            self.ui.error_message_8,
+            self.ui.error_message_9,
+            self.ui.error_message_10,
+        ]
+
         self.ui.close_button.clicked.connect(self.ui.close)
+        
+        self.network_state_signal.connect(self.set_network_state)
         self.progress_signal.connect(self.progress_value_changed)
         self.total_progress_signal.connect(self.total_progress_value_changed)
         self.total_status_signal.connect(self.total_progress_status_changed)
+        self.error_message_signal.connect(self.set_error_message)
 
     def reset_device_list(self):
         self.ui.progress_bar_total.setValue(0)
@@ -775,6 +812,7 @@ class ESP32UpdateListForm(QDialog):
             self.ui_port_list[i].setText("not connected")
             self.ui_progress_list[i].setValue(0)
             self.ui_progress_value_list[i].setText("0%")
+            self.ui_error_message_list[i].setText("")
 
     def set_device_list(self, device_list):
         self.reset_device_list()
@@ -784,6 +822,23 @@ class ESP32UpdateListForm(QDialog):
             pixmap.load(icon_path)
             self.ui_icon_list[i].setPixmap(pixmap)
             self.ui_port_list[i].setText(device)
+
+    def set_network_state(self, name, state):
+        for i, ui_port in enumerate(self.ui_port_list):
+            if ui_port.text() == name:
+                pixmap = QtGui.QPixmap()
+                if state == -1:
+                    icon_path = os.path.join(self.component_path, "modules", "network_error.png")
+                    pixmap.load(icon_path)
+                elif state == 0:
+                    icon_path = os.path.join(self.component_path, "modules", "network.png")
+                    pixmap.load(icon_path)
+                else:
+                    icon_path = os.path.join(self.component_path, "modules", "network_reconnect.png")
+                    pixmap.load(icon_path)
+
+                self.ui_icon_list[i].setPixmap(pixmap)
+                break
 
     def progress_value_changed(self, name, value):
         for i, ui_port in enumerate(self.ui_port_list):
@@ -798,12 +853,22 @@ class ESP32UpdateListForm(QDialog):
     def total_progress_status_changed(self, status):
         self.ui.total_status.setText(status)
 
+    def set_error_message(self, name, error_message):
+        for i, ui_port in enumerate(self.ui_port_list):
+            if ui_port.text() == name:
+                self.ui_error_message_list[i].setText(error_message)
+                break
+
 
 class STM32UpdateListForm(QDialog):
 
+    network_state_signal = pyqtSignal(str, int)
+    network_id_signal = pyqtSignal(str, int)
+    current_module_changed_signal = pyqtSignal(str, str)
     progress_signal = pyqtSignal(str, int, int)
     total_progress_signal = pyqtSignal(int)
     total_status_signal = pyqtSignal(str)
+    error_message_signal = pyqtSignal(str, str)
 
     def __init__(self, ui_path, component_path):
         QDialog.__init__(self)
@@ -848,6 +913,19 @@ class STM32UpdateListForm(QDialog):
             self.ui.port_8,
             self.ui.port_9,
             self.ui.port_10
+        ]
+
+        self.ui_network_id_list = [
+            self.ui.network_id_1,
+            self.ui.network_id_2,
+            self.ui.network_id_3,
+            self.ui.network_id_4,
+            self.ui.network_id_5,
+            self.ui.network_id_6,
+            self.ui.network_id_7,
+            self.ui.network_id_8,
+            self.ui.network_id_9,
+            self.ui.network_id_10,
         ]
 
         self.ui_current_progress_list = [
@@ -902,10 +980,28 @@ class STM32UpdateListForm(QDialog):
             self.ui.progress_total_value_10,
         ]
 
+        self.ui_error_message_list = [
+            self.ui.error_message_1,
+            self.ui.error_message_2,
+            self.ui.error_message_3,
+            self.ui.error_message_4,
+            self.ui.error_message_5,
+            self.ui.error_message_6,
+            self.ui.error_message_7,
+            self.ui.error_message_8,
+            self.ui.error_message_9,
+            self.ui.error_message_10,
+        ]
+
         self.ui.close_button.clicked.connect(self.ui.close)
+
+        self.network_state_signal.connect(self.set_network_state)
+        self.network_id_signal.connect(self.set_network_id)
+        self.current_module_changed_signal.connect(self.current_module_changed)
         self.progress_signal.connect(self.progress_value_changed)
         self.total_progress_signal.connect(self.total_progress_value_changed)
         self.total_status_signal.connect(self.total_progress_status_changed)
+        self.error_message_signal.connect(self.set_error_message)
 
     def reset_device_list(self):
         self.ui.progress_bar_total.setValue(0)
@@ -923,10 +1019,12 @@ class STM32UpdateListForm(QDialog):
             self.ui_current_icon_list[i].setPixmap(current_icon_pixmap)
 
             self.ui_port_list[i].setText("not connected")
+            self.ui_network_id_list[i].setText("network id")
             self.ui_current_progress_list[i].setValue(0)
             self.ui_total_progress_list[i].setValue(0)
             self.ui_current_progress_value_list[i].setText("0%")
             self.ui_total_progress_value_list[i].setText("0%")
+            self.ui_error_message_list[i].setText("")
 
     def set_device_list(self, device_list):
         self.reset_device_list()
@@ -954,6 +1052,12 @@ class STM32UpdateListForm(QDialog):
                 self.ui_icon_list[i].setPixmap(pixmap)
                 break
 
+    def set_network_id(self, name, id):
+        for i, ui_port in enumerate(self.ui_port_list):
+            if ui_port.text() == name:
+                self.ui_network_id_list[i].setText(f'0x{id:X}')
+                break
+
     def current_module_changed(self, name, module_type):
         if module_type:
             for i, ui_port in enumerate(self.ui_port_list):
@@ -978,3 +1082,9 @@ class STM32UpdateListForm(QDialog):
 
     def total_progress_status_changed(self, status):
         self.ui.total_status.setText(status)
+
+    def set_error_message(self, name, error_message):
+        for i, ui_port in enumerate(self.ui_port_list):
+            if ui_port.text() == name:
+                self.ui_error_message_list[i].setText(error_message)
+                break

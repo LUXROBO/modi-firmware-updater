@@ -87,6 +87,11 @@ class ESP32FirmwareUpdater(serial.Serial):
         self.update_error = 0
         self.update_error_message = ""
 
+        for device in stl.comports():
+            if self.name == device.name:
+                self.location = device.location
+                break
+
     def set_ui(self, ui):
         self.ui = ui
 
@@ -116,6 +121,7 @@ class ESP32FirmwareUpdater(serial.Serial):
             self.flushInput()
             self.flushOutput()
             self.close()
+            self.update_error = 1
 
             if self.ui:
                 self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
@@ -165,6 +171,7 @@ class ESP32FirmwareUpdater(serial.Serial):
             self.flushInput()
             self.flushOutput()
             self.close()
+            self.update_error = 1
 
             if self.ui:
                 self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
@@ -468,68 +475,81 @@ class ESP32FirmwareMultiUpdater():
         self.ui = ui
         self.list_ui = list_ui
 
-    def update_firmware(self, update_interpreter=False, force=True):
+    def update_firmware(self, modi_ports, update_interpreter=False, force=True):
         self.esp32_updaters = []
-        self.modi_ports = list_modi_ports()
-        if not self.modi_ports:
-            raise serial.SerialException("No MODI port is connected")
+        self.device_list = []
 
-        device_list = []
-        for i, modi_port in enumerate(self.modi_ports):
+        for i, modi_port in enumerate(modi_ports):
             if i > 9:
                 break
             try:
-                if self.list_ui:
-                    device_list.append(modi_port.device)
-                self.esp32_updaters.append(ESP32FirmwareUpdater(modi_port.device))
-            except Exception:
-                print('Next network module')
+                esp32_updater = ESP32FirmwareUpdater(modi_port.device)
+                esp32_updater.set_print(False)
+                esp32_updater.set_raise_error(False)
+            except Exception as e:
+                print(e)
+            else:
+                self.esp32_updaters.append(esp32_updater)
+                self.device_list.append(esp32_updater.location)
 
         if self.list_ui:
-            self.list_ui.set_device_list(device_list)
+            self.list_ui.set_device_list(self.device_list)
             self.list_ui.ui.close_button.setEnabled(False)
 
         self.update_in_progress = True
 
+        state = {}
         for esp32_updater in self.esp32_updaters:
-            esp32_updater.set_print(False)
             th.Thread(
                 target=esp32_updater.update_firmware,
                 args=(update_interpreter, force),
                 daemon=True
             ).start()
-
-        # wait
-        while True:
-            is_ready = True
-            for esp32_updater in self.esp32_updaters:
-                is_ready = is_ready and esp32_updater.update_in_progress
-            if is_ready:
-                break
-            time.sleep(0.1)
+            state[esp32_updater.location] = 0
 
         while True:
+            is_done = True
             current_sequence = 0
             total_sequence = 0
-            is_done = True
+
             for esp32_updater in self.esp32_updaters:
-                is_done  = is_done and (not esp32_updater.update_in_progress)
+                if state[esp32_updater.location] == 0:
+                    # wait
+                    is_done = is_done & False
+                    if esp32_updater.update_in_progress:
+                        state[esp32_updater.location] = 1
+                elif state[esp32_updater.location] == 1:
+                    # update modules
+                    if esp32_updater.update_error == 0:
+                        is_done = is_done & False
+                        for i, ui_port in enumerate(self.list_ui.ui_port_list):
+                            if ui_port.text() == esp32_updater.location:
+                                current = esp32_updater.current_sequence
+                                total = esp32_updater.total_sequence
 
-                for i, ui_port in enumerate(self.list_ui.ui_port_list):
-                    if ui_port.text() == esp32_updater.name:
-                        current = esp32_updater.current_sequence
-                        total = esp32_updater.total_sequence
+                                if total != 0:
+                                    value = current / total * 100.0
 
-                        if total != 0:
-                            value = current / total * 100.0
+                                    current_sequence += current
+                                    total_sequence += total
 
-                            current_sequence += current
-                            total_sequence += total
-
-                            if self.list_ui:
-                                self.list_ui.progress_signal.emit(esp32_updater.name, value)
-
-                        break
+                                    if self.list_ui:
+                                        self.list_ui.progress_signal.emit(esp32_updater.location, value)
+                                break
+                    else:
+                        state[esp32_updater.location] = 2
+                elif state[esp32_updater.location] == 2:
+                    # end
+                    current_sequence += esp32_updater.total_sequence
+                    total_sequence += esp32_updater.total_sequence
+                    if esp32_updater.update_error == 1:
+                        if self.list_ui:
+                            self.list_ui.network_state_signal.emit(esp32_updater.location, 0)
+                            self.list_ui.progress_signal.emit(esp32_updater.location, 100)
+                    else:
+                        if self.list_ui:
+                            self.list_ui.network_state_signal.emit(esp32_updater.location, -1)
+                    state[esp32_updater.location] = 3
 
             if total_sequence != 0:
                 if self.ui:
@@ -562,11 +582,11 @@ class ESP32FirmwareMultiUpdater():
 
                 print(f"\r{self.__progress_bar(current_sequence, total_sequence)}", end="")
 
-            time.sleep(0.05)
-
             if is_done:
                 break
-        
+
+            time.sleep(0.005)
+
         self.update_in_progress = False
 
         if self.list_ui:
