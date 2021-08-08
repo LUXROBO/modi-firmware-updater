@@ -8,8 +8,8 @@ from platform import system
 cwd = os.getcwd()
 
 pyqt_ui = os.path.join(cwd, 'modi_firmware_updater', 'assets', 'updater.ui')
-esp32_bins = os.path.join(cwd, 'modi_firmware_updater', 'assets', 'firmware', 'esp32', '*')
-stm32_bins = os.path.join(cwd, 'modi_firmware_updater', 'assets', 'firmware', 'stm32', '*')
+esp32_bins = os.path.join(cwd, 'modi_firmware_updater', 'assets', 'firmware', 'latest', 'esp32', '*')
+stm32_bins = os.path.join(cwd, 'modi_firmware_updater', 'assets', 'firmware', 'latest', 'stm32', '*')
 luxrobo_font = os.path.join(cwd, 'modi_firmware_updater', 'assets', 'font', '*')
 component_imgs = os.path.join(cwd, 'modi_firmware_updater', 'assets', 'component', '*')
 

@@ -332,9 +332,11 @@ class ESP32FirmwareUpdater(serial.Serial):
         for i, bin_path in enumerate(self.file_path):
             if self.ui:
                 if sys.platform.startswith("win"):
-                    root_path = pathlib.PurePosixPath(pathlib.PurePath(__file__),"..", "..", "assets", "firmware", "latest", "esp32")
+                    #root_path = pathlib.PurePosixPath(pathlib.PurePath(__file__),"..", "..", "assets", "firmware", "latest", "esp32")
+                    root_path = pathlib.PurePosixPath(pathlib.PurePath(__file__))
                 else:
-                    root_path = path.join(path.dirname(__file__), "..", "assets", "firmware", "latest", "esp32")
+                    #root_path = path.join(path.dirname(__file__), "..", "assets", "firmware", "latest", "esp32")
+                    root_path = path.join(path.dirname(__file__), "")
 
                 if sys.platform.startswith("win"):
                     firmware_path = pathlib.PurePosixPath(root_path, bin_path)
@@ -345,8 +347,10 @@ class ESP32FirmwareUpdater(serial.Serial):
                 with open(firmware_path, "rb") as bin_file:
                     bin_data = bin_file.read()
             else:
-                root_path = path.join(path.dirname(__file__), "..", "assets", "firmware", "latest", "esp32")
-                firmware_path = path.join(root_path, bin_path)
+                # root_path = path.join(path.dirname(__file__), "..", "assets", "firmware", "latest", "esp32")
+                # firmware_path = path.join(root_path, bin_path)
+                root_path = path.join(path.dirname(__file__), "")
+                firmware_path = path.join(path.dirname(__file__), "..", bin_path) #path.join(root_path, bin_path)
                 with open(firmware_path, "rb") as bin_file:
                     bin_data = bin_file.read()
             binary_firmware += bin_data
@@ -355,8 +359,13 @@ class ESP32FirmwareUpdater(serial.Serial):
         return binary_firmware
 
     def __get_latest_version(self):
-        root_path = path.join(path.dirname(__file__), "..", "assets", "firmware", "latest", "esp32")
-        version_path = path.join(root_path, "esp_version.txt")
+        # root_path = path.join(path.dirname(__file__), "..", "assets", "firmware", "latest", "esp32")
+        # version_path = path.join(root_path, "esp_version.txt")
+        
+        root_path = path.join(path.dirname(__file__), "")
+        # version_path = path.join(root_path, "esp_version.txt")
+        version_path = path.join(path.dirname(__file__), "..", "esp_version.txt") 
+
         with open(version_path, "r") as version_file:
             version_info = version_file.readline().lstrip("v").rstrip("\n")
         return version_info

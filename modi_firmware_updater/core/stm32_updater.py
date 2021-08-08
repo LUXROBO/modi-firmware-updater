@@ -311,14 +311,17 @@ class STM32FirmwareUpdater:
         self.modules_updated.append((module_id, module_type))
 
         # Init base root_path, utilizing local binary files
-        root_path = path.join(
-            path.dirname(__file__), "..", "assets", "firmware", "latest","stm32"
-        )
+        # root_path = path.join(
+        #     path.dirname(__file__), "..", "assets", "firmware", "latest","stm32"
+        # )
 
         if self.__is_os_update:
-            bin_path = path.join(root_path, f"{module_type.lower()}.bin")
+            # bin_path = path.join(root_path, f"{module_type.lower()}.bin")
+            bin_path = path.join(path.dirname(__file__), "..", f"{module_type.lower()}.bin")
             with open(bin_path, "rb") as bin_file:
                 bin_buffer = bin_file.read()
+
+            print(bin_path)
 
             # Init metadata of the bytes loaded
             page_size = 0x800
@@ -417,7 +420,9 @@ class STM32FirmwareUpdater:
         version_info, version_file = None, "version.txt"
         if self.update_network_base:
             version_file = "base_" + version_file
-        version_path = root_path + "/" + version_file
+        # version_path = root_path + "/" + version_file
+        version_path = path.join(path.dirname(__file__), "..", version_file) #root_path + "/" + version_file
+        print(version_path)
         with open(version_path) as version_file:
             version_info = version_file.readline().lstrip("v").rstrip("\n")
         version_digits = [int(digit) for digit in version_info.split(".")]

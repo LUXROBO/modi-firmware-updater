@@ -11,8 +11,8 @@ from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QDialog
 
 from modi_firmware_updater.util.connection_util import list_modi_ports
-from modi_firmware_updater.core.esp32_updater import ESP32FirmwareMultiUpdater
-from modi_firmware_updater.core.stm32_updater import STM32FirmwareMultiUpdater
+from modi_firmware_updater.core.esp32_updater import ESP32FirmwareUpdater
+from modi_firmware_updater.core.stm32_updater import STM32FirmwareUpdater
 
 
 class StdoutRedirect(QObject):
@@ -142,16 +142,12 @@ class Form(QDialog):
 
         if installer:
             ui_path = os.path.join(os.path.dirname(__file__), "updater.ui")
-            esp32_update_list_ui_path = os.path.join(os.path.dirname(__file__), "esp32_update_list.ui")
-            stm32_update_list_ui_path = os.path.join(os.path.dirname(__file__), "stm32_update_list.ui")
             if sys.platform.startswith("win"):
                 self.component_path = pathlib.PurePosixPath(pathlib.PurePath(__file__), "..")
             else:
                 self.component_path = os.path.dirname(__file__).replace("util", "")
         else:
             ui_path = os.path.join(os.path.dirname(__file__), "assets", "updater.ui")
-            esp32_update_list_ui_path = os.path.join(os.path.dirname(__file__), "assets", "esp32_update_list.ui")
-            stm32_update_list_ui_path = os.path.join(os.path.dirname(__file__), "assets", "stm32_update_list.ui")
             if sys.platform.startswith("win"):
                 self.component_path = pathlib.PurePosixPath(pathlib.PurePath(__file__), "..", "assets", "component")
             else:
@@ -168,9 +164,6 @@ class Form(QDialog):
         qPixmapVar.load(logo_path)
         self.ui.lux_logo.setPixmap(qPixmapVar)
 
-        self.esp32_update_list_form = ESP32UpdateListForm(esp32_update_list_ui_path, self.component_path)
-        self.stm32_update_list_form = STM32UpdateListForm(stm32_update_list_ui_path, self.component_path)
-
         # Buttons image
         self.active_path = pathlib.PurePosixPath(self.component_path, "btn_frame_active.png")
         self.inactive_path = pathlib.PurePosixPath(self.component_path, "btn_frame_inactive.png")
@@ -186,7 +179,7 @@ class Form(QDialog):
         self.ui.devmode_button.setStyleSheet(f"border-image: url({self.language_frame_path}); font-size: 13px")
         self.ui.console.setStyleSheet("font-size: 10px")
 
-        self.ui.setWindowTitle("MODI Firmware Updater")
+        self.ui.setWindowTitle("MODI Firmware Updater(교원 AS용)")
 
         # Redirect stdout to text browser (i.e. console in our UI)
         # self.stdout = StdoutRedirect()
@@ -257,7 +250,6 @@ class Form(QDialog):
     def update_network_esp32(self):
         button_start = time.time()
         if self.firmware_updater and self.firmware_updater.update_in_progress:
-            self.esp32_update_list_form.ui.show()
             return
         self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.pressed_path}); font-size: 16px")
         self.ui.console.clear()
@@ -265,10 +257,8 @@ class Form(QDialog):
         th.Thread(
             target=self.__click_motion, args=(0, button_start), daemon=True
         ).start()
-        self.esp32_update_list_form.reset_device_list()
-        self.esp32_update_list_form.ui.show()
-        esp32_updater = ESP32FirmwareMultiUpdater()
-        esp32_updater.set_ui(self.ui, self.esp32_update_list_form)
+        esp32_updater = ESP32FirmwareUpdater()
+        esp32_updater.set_ui(self.ui)
         th.Thread(
             target=esp32_updater.update_firmware,
             daemon=True
@@ -278,7 +268,6 @@ class Form(QDialog):
     def update_network_esp32_interpreter(self):
         button_start = time.time()
         if self.firmware_updater and self.firmware_updater.update_in_progress:
-            self.esp32_update_list_form.ui.show()
             return
         self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.pressed_path}); font-size: 16px")
         self.ui.console.clear()
@@ -286,10 +275,8 @@ class Form(QDialog):
         th.Thread(
             target=self.__click_motion, args=(1, button_start), daemon=True
         ).start()
-        self.esp32_update_list_form.reset_device_list()
-        self.esp32_update_list_form.ui.show()
-        esp32_updater = ESP32FirmwareMultiUpdater()
-        esp32_updater.set_ui(self.ui, self.esp32_update_list_form)
+        esp32_updater = ESP32FirmwareUpdater()
+        esp32_updater.set_ui(self.ui)
         th.Thread(
             target=esp32_updater.update_firmware,
             args=(True,),
@@ -300,7 +287,6 @@ class Form(QDialog):
     def update_stm32_modules(self):
         button_start = time.time()
         if self.firmware_updater and self.firmware_updater.update_in_progress:
-            self.stm32_update_list_form.ui.show()
             return
         self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.pressed_path}); font-size: 16px")
         self.ui.console.clear()
@@ -313,13 +299,10 @@ class Form(QDialog):
         if not modi_ports:
             raise Exception("No MODI port is connected")
 
-        self.stm32_update_list_form.reset_device_list()
-        self.stm32_update_list_form.ui.show()
-        stm32_updater = STM32FirmwareMultiUpdater()
-        stm32_updater.set_ui(self.ui, self.stm32_update_list_form)
+        stm32_updater = STM32FirmwareUpdater()
+        stm32_updater.set_ui(self.ui)
         th.Thread(
             target=stm32_updater.update_module_firmware,
-            args=(modi_ports, ),
             daemon=True
         ).start()
         self.firmware_updater = stm32_updater
@@ -327,7 +310,6 @@ class Form(QDialog):
     def update_network_stm32(self):
         button_start = time.time()
         if self.firmware_updater and self.firmware_updater.update_in_progress:
-            self.stm32_update_list_form.ui.show()
             return
         self.ui.update_network_stm32.setStyleSheet(
             f"border-image: url({self.pressed_path}); font-size: 16px"
@@ -337,9 +319,8 @@ class Form(QDialog):
         th.Thread(
             target=self.__click_motion, args=(3, button_start), daemon=True
         ).start()
-        self.stm32_update_list_form.reset_device_list()
-        stm32_updater = STM32FirmwareMultiUpdater()
-        stm32_updater.set_ui(self.ui, self.stm32_update_list_form)
+        stm32_updater = STM32FirmwareUpdater()
+        stm32_updater.set_ui(self.ui)
         th.Thread(
             target=stm32_updater.update_module_firmware,
             args=(True,),
