@@ -7,12 +7,6 @@ from platform import system
 
 cwd = os.getcwd()
 
-pyqt_ui = os.path.join(cwd, 'modi_firmware_updater', 'assets', 'updater.ui')
-esp32_bins = os.path.join(cwd, 'modi_firmware_updater', 'assets', 'firmware', 'esp32', '*')
-stm32_bins = os.path.join(cwd, 'modi_firmware_updater', 'assets', 'firmware', 'stm32', '*')
-luxrobo_font = os.path.join(cwd, 'modi_firmware_updater', 'assets', 'font', '*')
-component_imgs = os.path.join(cwd, 'modi_firmware_updater', 'assets', 'component', '*')
-
 site_package_paths = [path for path in sys.path if path.endswith('site-packages')]
 if not site_package_paths:
     raise ValueError('There is no valid path for site-packages!')
@@ -24,11 +18,7 @@ a = Analysis(
     binaries=[],
     # Put data(i.e. assets) under virtual 'modi_firmware_updater/'
     datas=[
-        (pyqt_ui, 'modi_firmware_updater'),
-        (esp32_bins, 'modi_firmware_updater'),
-        (stm32_bins, 'modi_firmware_updater'),
-        (luxrobo_font, 'modi_firmware_updater'),
-        (component_imgs, 'modi_firmware_updater'),
+        ('modi_firmware_updater/assets', 'modi_firmware_updater/assets'),
     ],
     hiddenimports=[
         "modi_firmware_updater.util.connection_util",

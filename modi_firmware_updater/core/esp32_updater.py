@@ -347,8 +347,6 @@ class ESP32FirmwareUpdater(serial.Serial):
                     firmware_path = pathlib.PurePosixPath(root_path, bin_path)
                 else:
                     firmware_path = path.join(root_path, bin_path)
-                if self.ui.installation:
-                    firmware_path = path.dirname(__file__).replace("core", bin_path)
                 with open(firmware_path, "rb") as bin_file:
                     bin_data = bin_file.read()
             else:

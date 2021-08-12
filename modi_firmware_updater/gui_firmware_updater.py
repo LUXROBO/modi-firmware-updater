@@ -147,22 +147,13 @@ class Form(QDialog):
         self.err_list = list()
         self.is_popup = False
 
-        if installer:
-            ui_path = os.path.join(os.path.dirname(__file__), "updater.ui")
-            esp32_update_list_ui_path = os.path.join(os.path.dirname(__file__), "esp32_update_list.ui")
-            stm32_update_list_ui_path = os.path.join(os.path.dirname(__file__), "stm32_update_list.ui")
-            if sys.platform.startswith("win"):
-                self.component_path = pathlib.PurePosixPath(pathlib.PurePath(__file__), "..")
-            else:
-                self.component_path = os.path.dirname(__file__).replace("util", "")
+        ui_path = os.path.join(os.path.dirname(__file__), "assets", "updater.ui")
+        esp32_update_list_ui_path = os.path.join(os.path.dirname(__file__), "assets", "esp32_update_list.ui")
+        stm32_update_list_ui_path = os.path.join(os.path.dirname(__file__), "assets", "stm32_update_list.ui")
+        if sys.platform.startswith("win"):
+            self.component_path = pathlib.PurePosixPath(pathlib.PurePath(__file__), "..", "assets", "component")
         else:
-            ui_path = os.path.join(os.path.dirname(__file__), "assets", "updater.ui")
-            esp32_update_list_ui_path = os.path.join(os.path.dirname(__file__), "assets", "esp32_update_list.ui")
-            stm32_update_list_ui_path = os.path.join(os.path.dirname(__file__), "assets", "stm32_update_list.ui")
-            if sys.platform.startswith("win"):
-                self.component_path = pathlib.PurePosixPath(pathlib.PurePath(__file__), "..", "assets", "component")
-            else:
-                self.component_path = os.path.join(os.path.dirname(__file__), "assets", "component")
+            self.component_path = os.path.join(os.path.dirname(__file__), "assets", "component")
         self.ui = uic.loadUi(ui_path)
 
         self.ui.setStyleSheet("background-color: white")
@@ -196,18 +187,15 @@ class Form(QDialog):
         self.ui.setWindowTitle("MODI Firmware Updater")
 
         # Redirect stdout to text browser (i.e. console in our UI)
-        # self.stdout = StdoutRedirect()
-        # self.stdout.start()
-        # self.stdout.printOccur.connect(
-        #     lambda line: self.__append_text_line(line)
-        # )
-        # self.stdout.logger = self.logger
+        self.stdout = StdoutRedirect()
+        self.stdout.start()
+        self.stdout.printOccur.connect(
+            lambda line: self.__append_text_line(line)
+        )
+        self.stdout.logger = self.logger
 
         # Set signal for thread communication
         self.stream = ThreadSignal()
-
-        # Init variable to check if the program is in installation mode
-        self.ui.installation = installer
 
         # Connect up the buttons
         self.ui.update_network_esp32.clicked.connect(self.update_network_esp32)
