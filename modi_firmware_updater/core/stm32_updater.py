@@ -325,17 +325,17 @@ class STM32FirmwareUpdater:
             flash_memory_addr = 0x08000000
 
             bin_size = sys.getsizeof(bin_buffer)
-            bin_begin = 0x9000 if not self.update_network_base else page_size
+            bin_begin = 0x9000 if (not self.update_network_base and self.module_type != "network") else page_size
             bin_end = bin_size - ((bin_size - bin_begin) % page_size)
 
-            page_offset = 0 if not self.update_network_base else 0x8800
+            page_offset = 0 if (not self.update_network_base and self.module_type != "network") else 0x8800
             for page_begin in range(bin_begin, bin_end + 1, page_size):
                 # self.progress = 100 * page_begin // bin_end
                 progress = 100 * page_begin // bin_end
                 self.progress = progress
 
                 if self.ui:
-                    if self.update_network_base:
+                    if self.update_network_base and self.module_type == "network":
                         if self.ui.is_english:
                             self.ui.update_network_stm32.setText(
                                 f"Network STM32 update is in progress. "
@@ -849,6 +849,8 @@ class STM32FirmwareMultiUpdater():
             is_done = True
             total_progress = 0
             for stm32_updater in self.stm32_updaters:
+                if self.list_ui and stm32_updater.network_id:
+                    self.list_ui.network_id_signal.emit(stm32_updater.location, stm32_updater.network_id)
 
                 if state[stm32_updater.location] == 0:
                     # get module update list (only module update)
@@ -872,8 +874,6 @@ class STM32FirmwareMultiUpdater():
                         else:
                             self.list_ui.network_state_signal.emit(stm32_updater.location, 0)
 
-                    if self.list_ui and stm32_updater.network_id:
-                        self.list_ui.network_id_signal.emit(stm32_updater.location, stm32_updater.network_id)
                     if stm32_updater.update_error == 0:
                         is_done = is_done & False
                         for i, device in enumerate(self.device_list):
