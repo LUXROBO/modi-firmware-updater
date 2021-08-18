@@ -692,9 +692,9 @@ class Form(QDialog):
         # Display user text input
         self.ui.console.moveCursor(QtGui.QTextCursor.End)
         self.ui.console.insertPlainText(line)
-        QtWidgets.QApplication.processEvents(
-            QtCore.QEventLoop.ExcludeUserInputEvents
-        )
+        # QtWidgets.QApplication.processEvents(
+        #     QtCore.QEventLoop.ExcludeUserInputEvents
+        # )
 
     @staticmethod
     def __is_update_progress_line(line):
@@ -819,6 +819,7 @@ class ESP32UpdateListForm(QDialog):
 
     def set_device_list(self, device_list):
         self.reset_device_list()
+        device_list = sorted(device_list)
         for i, device in enumerate(device_list):
             icon_path = os.path.join(self.component_path, "modules", "network.png")
             pixmap = QtGui.QPixmap()
@@ -1037,6 +1038,7 @@ class STM32UpdateListForm(QDialog):
 
     def set_device_list(self, device_list):
         self.reset_device_list()
+        device_list = sorted(device_list)
         for i, device in enumerate(device_list):
             icon_path = os.path.join(self.component_path, "modules", "network.png")
             pixmap = QtGui.QPixmap()
