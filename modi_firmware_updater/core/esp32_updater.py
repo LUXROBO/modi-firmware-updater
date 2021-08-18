@@ -589,7 +589,7 @@ class ESP32FirmwareMultiUpdater():
             if is_done:
                 break
 
-            time.sleep(0.005)
+            time.sleep(0.1)
 
         self.update_in_progress = False
 
@@ -626,8 +626,8 @@ class ESP32FirmwareMultiUpdater():
 
     @staticmethod
     def __progress_bar(current: int, total: int) -> str:
-        curr_bar = 50 * current // total
-        rest_bar = 50 - curr_bar
+        curr_bar = int(50 * current // total)
+        rest_bar = int(50 - curr_bar)
         return (
             f"Firmware Upload: [{'=' * curr_bar}>{'.' * rest_bar}] "
             f"{100 * current / total:3.1f}%"

@@ -76,6 +76,7 @@ class STM32FirmwareUpdater:
         self.raise_error_message = True
         self.update_error = 0
         self.update_error_message = ""
+        self.update_start = False
 
         for device in stl.comports():
             if self.name == device.name:
@@ -119,11 +120,14 @@ class STM32FirmwareUpdater:
             self.network_version = ".".join(module_version)
 
     def update_module_firmware(self, update_network_base=False):
+        self.update_start = True
+        time.sleep(0.5)
+        self.request_network_id()
         if update_network_base:
             r_mode = 1
             self.update_network_base = True
             # Retrieve the network id only and update it accordingly
-            timeout, delay = 3, 0.2
+            timeout, delay = 10, 0.01
             while not self.network_id:
                 if timeout <= 0:
                     if not self.update_in_progress:
@@ -160,7 +164,7 @@ class STM32FirmwareUpdater:
 
     def close(self):
         self.__running = False
-        time.sleep(0.5)
+        time.sleep(2)
         self.__conn.close_conn()
 
     def __open_conn(self, port=None):
@@ -218,7 +222,7 @@ class STM32FirmwareUpdater:
     def __reinitialize_serial_connection(self):
         self.__print("Temporally disconnecting the serial connection...")
         self.close()
-        time.sleep(2)
+        time.sleep(10)
         self.__print("Re-init serial connection for the update, in 2 seconds...")
         self.__conn = self.__open_conn()
         self.__conn.open_conn()
@@ -735,6 +739,7 @@ class STM32FirmwareUpdater:
         return f"[{'=' * curr_bar}>{'.' * rest_bar}]"
 
     def __read_conn(self):
+        self.request_network_id()
         while True:
             self.__handle_message()
             time.sleep(0.001)
@@ -756,7 +761,7 @@ class STM32FirmwareUpdater:
             0x0C: self.__update_firmware_state,
         }.get(ins)
 
-        if command:
+        if command and self.update_start:
             command(sid, data)
 
     def __update_firmware_state(self, sid: int, data: str):
@@ -859,7 +864,7 @@ class STM32FirmwareMultiUpdater():
                         num_to_update[stm32_updater.location] = len(stm32_updater.modules_to_update) + 1
                         state[stm32_updater.location] = 1
                     else:
-                        wait_timeout[stm32_updater.location] += 0.005
+                        wait_timeout[stm32_updater.location] += 0.1
                         if wait_timeout[stm32_updater.location] > 3:
                             wait_timeout[stm32_updater.location] = 0
                             state[stm32_updater.location] = 2
@@ -939,7 +944,7 @@ class STM32FirmwareMultiUpdater():
             if is_done:
                 break
 
-            time.sleep(0.005)
+            time.sleep(0.1)
 
         self.update_in_progress = False
 
