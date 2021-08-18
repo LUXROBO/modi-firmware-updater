@@ -830,6 +830,7 @@ class STM32FirmwareMultiUpdater():
         self.update_in_progress = True
 
         state = {}
+        wait_timeout = {}
         for stm32_updater in self.stm32_updaters:
             th.Thread(
                 target=stm32_updater.update_module_firmware,
@@ -841,17 +842,28 @@ class STM32FirmwareMultiUpdater():
             else:
                 state[stm32_updater.location] = 0
 
+            wait_timeout[stm32_updater.location] = 0
+
         num_to_update = {}
         while True:
             is_done = True
             total_progress = 0
             for stm32_updater in self.stm32_updaters:
+
                 if state[stm32_updater.location] == 0:
                     # get module update list (only module update)
                     is_done = is_done & False
                     if stm32_updater.update_in_progress:
                         num_to_update[stm32_updater.location] = len(stm32_updater.modules_to_update) + 1
                         state[stm32_updater.location] = 1
+                    else:
+                        wait_timeout[stm32_updater.location] += 0.005
+                        if wait_timeout[stm32_updater.location] > 3:
+                            wait_timeout[stm32_updater.location] = 0
+                            state[stm32_updater.location] = 2
+                            stm32_updater.update_error = -1
+                            stm32_updater.update_error_message = "No modules"
+
                 elif state[stm32_updater.location] == 1:
                     # update modules
                     if self.list_ui and update_network_base:
@@ -862,7 +874,6 @@ class STM32FirmwareMultiUpdater():
 
                     if self.list_ui and stm32_updater.network_id:
                         self.list_ui.network_id_signal.emit(stm32_updater.location, stm32_updater.network_id)
-
                     if stm32_updater.update_error == 0:
                         is_done = is_done & False
                         for i, device in enumerate(self.device_list):
@@ -900,6 +911,7 @@ class STM32FirmwareMultiUpdater():
                             self.list_ui.progress_signal.emit(stm32_updater.location, 100, 100)
                             total_progress += 100 / len(self.stm32_updaters)
                     else:
+                        stm32_updater.close()
                         if self.list_ui:
                             self.list_ui.network_state_signal.emit(stm32_updater.location, -1)
                             self.list_ui.set_error_message(stm32_updater.location, stm32_updater.update_error_message)
