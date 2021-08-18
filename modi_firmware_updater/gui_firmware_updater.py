@@ -703,6 +703,7 @@ class Form(QDialog):
 class ESP32UpdateListForm(QDialog):
 
     network_state_signal = pyqtSignal(str, int)
+    network_id_signal = pyqtSignal(str, int)
     progress_signal = pyqtSignal(str, int)
     total_progress_signal = pyqtSignal(int)
     total_status_signal = pyqtSignal(str)
@@ -738,6 +739,19 @@ class ESP32UpdateListForm(QDialog):
             self.ui.port_8,
             self.ui.port_9,
             self.ui.port_10
+        ]
+
+        self.ui_network_id_list = [
+            self.ui.network_id_1,
+            self.ui.network_id_2,
+            self.ui.network_id_3,
+            self.ui.network_id_4,
+            self.ui.network_id_5,
+            self.ui.network_id_6,
+            self.ui.network_id_7,
+            self.ui.network_id_8,
+            self.ui.network_id_9,
+            self.ui.network_id_10,
         ]
 
         self.ui_progress_list = [
@@ -782,6 +796,7 @@ class ESP32UpdateListForm(QDialog):
         self.ui.close_button.clicked.connect(self.ui.close)
         
         self.network_state_signal.connect(self.set_network_state)
+        self.network_id_signal.connect(self.set_network_id)
         self.progress_signal.connect(self.progress_value_changed)
         self.total_progress_signal.connect(self.total_progress_value_changed)
         self.total_status_signal.connect(self.total_progress_status_changed)
@@ -826,6 +841,12 @@ class ESP32UpdateListForm(QDialog):
                     pixmap.load(icon_path)
 
                 self.ui_icon_list[i].setPixmap(pixmap)
+                break
+
+    def set_network_id(self, name, id):
+        for i, ui_port in enumerate(self.ui_port_list):
+            if ui_port.text() == name:
+                self.ui_network_id_list[i].setText(f'0x{id:X}')
                 break
 
     def progress_value_changed(self, name, value):

@@ -108,6 +108,9 @@ class ESP32FirmwareUpdater(serial.Serial):
             self.current_sequence = 0
             self.total_sequence = 1
             self.update_in_progress = True
+
+            self.__boot_to_app()
+            self.id = self.__get_esp_id()
             time.sleep(1)
 
             self.write(b'{"c":160,"s":0,"d":18,"b":"AAMAAAAA","l":6}')
@@ -511,6 +514,9 @@ class ESP32FirmwareMultiUpdater():
             total_sequence = 0
 
             for esp32_updater in self.esp32_updaters:
+                if self.list_ui and esp32_updater.id:
+                    self.list_ui.network_id_signal.emit(esp32_updater.location, esp32_updater.id)
+
                 if state[esp32_updater.location] == 0:
                     # wait
                     is_done = is_done & False
