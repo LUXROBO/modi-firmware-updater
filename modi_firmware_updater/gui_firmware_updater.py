@@ -20,6 +20,7 @@ from PyQt5.QtWidgets import QDialog
 from modi_firmware_updater.util.connection_util import list_modi_ports
 from modi_firmware_updater.core.esp32_updater import ESP32FirmwareMultiUpdater
 from modi_firmware_updater.core.stm32_updater import STM32FirmwareMultiUpdater
+from modi_firmware_updater.core.stm32_network_updater import NetworkFirmwareMultiUpdater
 
 
 class StdoutRedirect(QObject):
@@ -368,14 +369,14 @@ class Form(QDialog):
 
         self.stm32_update_list_form.reset_device_list()
         self.stm32_update_list_form.ui.show()
-        stm32_updater = STM32FirmwareMultiUpdater()
-        stm32_updater.set_ui(self.ui, self.stm32_update_list_form)
+        network_updater = NetworkFirmwareMultiUpdater()
+        network_updater.set_ui(self.ui, self.stm32_update_list_form)
         th.Thread(
-            target=stm32_updater.update_module_firmware,
-            args=(modi_ports, True,),
+            target=network_updater.update_module_firmware,
+            args=(modi_ports, ),
             daemon=True,
         ).start()
-        self.firmware_updater = stm32_updater
+        self.firmware_updater = network_updater
 
     def dev_mode_button(self):
         button_start = time.time()
@@ -701,13 +702,12 @@ class Form(QDialog):
         return line.startswith("\rUpdating") or line.startswith("\rFirmware Upload: [")
 
 class ESP32UpdateListForm(QDialog):
-
-    network_state_signal = pyqtSignal(str, int)
-    network_id_signal = pyqtSignal(str, int)
-    progress_signal = pyqtSignal(str, int)
+    network_state_signal = pyqtSignal(int, int)
+    network_uuid_signal = pyqtSignal(int, str)
+    progress_signal = pyqtSignal(int, int)
     total_progress_signal = pyqtSignal(int)
     total_status_signal = pyqtSignal(str)
-    error_message_signal = pyqtSignal(str, str)
+    error_message_signal = pyqtSignal(int, str)
 
     def __init__(self, ui_path, component_path):
         QDialog.__init__(self)
@@ -726,19 +726,6 @@ class ESP32UpdateListForm(QDialog):
             self.ui.image_8,
             self.ui.image_9,
             self.ui.image_10
-        ]
-
-        self.ui_port_list = [
-            self.ui.port_1,
-            self.ui.port_2,
-            self.ui.port_3,
-            self.ui.port_4,
-            self.ui.port_5,
-            self.ui.port_6,
-            self.ui.port_7,
-            self.ui.port_8,
-            self.ui.port_9,
-            self.ui.port_10
         ]
 
         self.ui_network_id_list = [
@@ -796,89 +783,93 @@ class ESP32UpdateListForm(QDialog):
         self.ui.close_button.clicked.connect(self.ui.close)
         
         self.network_state_signal.connect(self.set_network_state)
-        self.network_id_signal.connect(self.set_network_id)
+        self.network_uuid_signal.connect(self.set_network_uuid)
         self.progress_signal.connect(self.progress_value_changed)
         self.total_progress_signal.connect(self.total_progress_value_changed)
         self.total_status_signal.connect(self.total_progress_status_changed)
         self.error_message_signal.connect(self.set_error_message)
 
+        self.device_num = 0
+        self.device_max_num = 10
+
     def reset_device_list(self):
+        self.device_num = 0
         self.ui.progress_bar_total.setValue(0)
         self.ui.total_status.setText("")
 
-        for i, progress in enumerate(self.ui_progress_list):
+        for i in range(0, 10):
             icon_path = os.path.join(self.component_path, "modules", "network_none.png")
             pixmap = QtGui.QPixmap()
             pixmap.load(icon_path)
 
             self.ui_icon_list[i].setPixmap(pixmap)
-            self.ui_port_list[i].setText("not connected")
             self.ui_progress_list[i].setValue(0)
             self.ui_progress_value_list[i].setText("0%")
             self.ui_error_message_list[i].setText("")
+            self.ui_network_id_list[i].setText("not connected")
 
-    def set_device_list(self, device_list):
+    def set_device_num(self, num):
         self.reset_device_list()
-        device_list = sorted(device_list)
-        for i, device in enumerate(device_list):
+        self.device_num = num
+        for i in range(0, self.device_num):
             icon_path = os.path.join(self.component_path, "modules", "network.png")
             pixmap = QtGui.QPixmap()
             pixmap.load(icon_path)
             self.ui_icon_list[i].setPixmap(pixmap)
-            self.ui_port_list[i].setText(device)
 
-    def set_network_state(self, name, state):
-        for i, ui_port in enumerate(self.ui_port_list):
-            if ui_port.text() == name:
-                pixmap = QtGui.QPixmap()
-                if state == -1:
-                    icon_path = os.path.join(self.component_path, "modules", "network_error.png")
-                    pixmap.load(icon_path)
-                elif state == 0:
-                    icon_path = os.path.join(self.component_path, "modules", "network.png")
-                    pixmap.load(icon_path)
-                else:
-                    icon_path = os.path.join(self.component_path, "modules", "network_reconnect.png")
-                    pixmap.load(icon_path)
+    def set_network_state(self, index, state):
+        if index > self.device_num - 1:
+            return
 
-                self.ui_icon_list[i].setPixmap(pixmap)
-                break
+        pixmap = QtGui.QPixmap()
+        if state == -1:
+            icon_path = os.path.join(self.component_path, "modules", "network_error.png")
+            pixmap.load(icon_path)
+        elif state == 0:
+            icon_path = os.path.join(self.component_path, "modules", "network.png")
+            pixmap.load(icon_path)
+        else:
+            icon_path = os.path.join(self.component_path, "modules", "network_reconnect.png")
+            pixmap.load(icon_path)
 
-    def set_network_id(self, name, id):
-        for i, ui_port in enumerate(self.ui_port_list):
-            if ui_port.text() == name:
-                self.ui_network_id_list[i].setText(f'0x{id:X}')
-                break
+        self.ui_icon_list[index].setPixmap(pixmap)
 
-    def progress_value_changed(self, name, value):
-        for i, ui_port in enumerate(self.ui_port_list):
-            if ui_port.text() == name:
-                self.ui_progress_list[i].setValue(value)
-                self.ui_progress_value_list[i].setText(str(value) + "%")
-                break
+    def set_network_uuid(self, index, str):
+        if index > self.device_num - 1:
+            return
+
+        self.ui_network_id_list[index].setText(str)
+
+    def progress_value_changed(self, index, value):
+        if index > self.device_num - 1:
+            return
+
+        self.ui_progress_list[index].setValue(value)
+        self.ui_progress_list[index].repaint()
+        self.ui_progress_value_list[index].setText(str(value) + "%")
 
     def total_progress_value_changed(self, value):
         self.ui.progress_bar_total.setValue(value)
+        self.ui.progress_bar_total.repaint()
 
     def total_progress_status_changed(self, status):
         self.ui.total_status.setText(status)
 
-    def set_error_message(self, name, error_message):
-        for i, ui_port in enumerate(self.ui_port_list):
-            if ui_port.text() == name:
-                self.ui_error_message_list[i].setText(error_message)
-                break
+    def set_error_message(self, index, error_message):
+        if index > self.device_num - 1:
+            return
+
+        self.ui_error_message_list[index].setText(error_message)
 
 
 class STM32UpdateListForm(QDialog):
-
-    network_state_signal = pyqtSignal(str, int)
-    network_id_signal = pyqtSignal(str, int)
-    current_module_changed_signal = pyqtSignal(str, str)
-    progress_signal = pyqtSignal(str, int, int)
+    network_state_signal = pyqtSignal(int, int)
+    network_uuid_signal = pyqtSignal(int, str)
+    current_module_changed_signal = pyqtSignal(int, str)
+    progress_signal = pyqtSignal(int, int, int)
     total_progress_signal = pyqtSignal(int)
     total_status_signal = pyqtSignal(str)
-    error_message_signal = pyqtSignal(str, str)
+    error_message_signal = pyqtSignal(int, str)
 
     def __init__(self, ui_path, component_path):
         QDialog.__init__(self)
@@ -910,19 +901,6 @@ class STM32UpdateListForm(QDialog):
             self.ui.image_current_8,
             self.ui.image_current_9,
             self.ui.image_current_10,
-        ]
-
-        self.ui_port_list = [
-            self.ui.port_1,
-            self.ui.port_2,
-            self.ui.port_3,
-            self.ui.port_4,
-            self.ui.port_5,
-            self.ui.port_6,
-            self.ui.port_7,
-            self.ui.port_8,
-            self.ui.port_9,
-            self.ui.port_10
         ]
 
         self.ui_network_id_list = [
@@ -1006,18 +984,22 @@ class STM32UpdateListForm(QDialog):
         self.ui.close_button.clicked.connect(self.ui.close)
 
         self.network_state_signal.connect(self.set_network_state)
-        self.network_id_signal.connect(self.set_network_id)
+        self.network_uuid_signal.connect(self.set_network_uuid)
         self.current_module_changed_signal.connect(self.current_module_changed)
         self.progress_signal.connect(self.progress_value_changed)
         self.total_progress_signal.connect(self.total_progress_value_changed)
         self.total_status_signal.connect(self.total_progress_status_changed)
         self.error_message_signal.connect(self.set_error_message)
+        
+        self.device_num = 0
+        self.device_max_num = 10
 
     def reset_device_list(self):
+        self.device_num = 0
         self.ui.progress_bar_total.setValue(0)
         self.ui.total_status.setText("")
 
-        for i, progress in enumerate(self.ui_port_list):
+        for i in range(0, 10):
             icon_path = os.path.join(self.component_path, "modules", "network_none.png")
             icon_pixmap = QtGui.QPixmap()
             icon_pixmap.load(icon_path)
@@ -1028,74 +1010,79 @@ class STM32UpdateListForm(QDialog):
             current_icon_pixmap.load(current_icon_path)
             self.ui_current_icon_list[i].setPixmap(current_icon_pixmap)
 
-            self.ui_port_list[i].setText("not connected")
-            self.ui_network_id_list[i].setText("network id")
             self.ui_current_progress_list[i].setValue(0)
             self.ui_total_progress_list[i].setValue(0)
             self.ui_current_progress_value_list[i].setText("0%")
             self.ui_total_progress_value_list[i].setText("0%")
             self.ui_error_message_list[i].setText("")
+            self.ui_network_id_list[i].setText("not connected")
 
-    def set_device_list(self, device_list):
+    def set_device_num(self, num):
         self.reset_device_list()
-        device_list = sorted(device_list)
-        for i, device in enumerate(device_list):
+        self.device_num = num
+        for i in range(0, self.device_num):
             icon_path = os.path.join(self.component_path, "modules", "network.png")
             pixmap = QtGui.QPixmap()
             pixmap.load(icon_path)
             self.ui_icon_list[i].setPixmap(pixmap)
-            self.ui_port_list[i].setText(device)
 
-    def set_network_state(self, name, state):
-        for i, ui_port in enumerate(self.ui_port_list):
-            if ui_port.text() == name:
-                pixmap = QtGui.QPixmap()
-                if state == -1:
-                    icon_path = os.path.join(self.component_path, "modules", "network_error.png")
-                    pixmap.load(icon_path)
-                elif state == 0:
-                    icon_path = os.path.join(self.component_path, "modules", "network.png")
-                    pixmap.load(icon_path)
-                else:
-                    icon_path = os.path.join(self.component_path, "modules", "network_reconnect.png")
-                    pixmap.load(icon_path)
+    def set_network_state(self, index, state):
+        if index > self.device_num - 1:
+            return
 
-                self.ui_icon_list[i].setPixmap(pixmap)
-                break
+        pixmap = QtGui.QPixmap()
+        if state == -1:
+            icon_path = os.path.join(self.component_path, "modules", "network_error.png")
+            pixmap.load(icon_path)
+        elif state == 0:
+            icon_path = os.path.join(self.component_path, "modules", "network.png")
+            pixmap.load(icon_path)
+        elif state == 1:
+            icon_path = os.path.join(self.component_path, "modules", "network_disconnect.png")
+            pixmap.load(icon_path)
+        elif state == 2:
+            icon_path = os.path.join(self.component_path, "modules", "network_reconnect.png")
+            pixmap.load(icon_path)
 
-    def set_network_id(self, name, id):
-        for i, ui_port in enumerate(self.ui_port_list):
-            if ui_port.text() == name:
-                self.ui_network_id_list[i].setText(f'0x{id:X}')
-                break
+        self.ui_icon_list[index].setPixmap(pixmap)
 
-    def current_module_changed(self, name, module_type):
+    def set_network_uuid(self, index, str):
+        if index > self.device_num - 1:
+            return
+
+        self.ui_network_id_list[index].setText(str)
+
+    def current_module_changed(self, index, module_type):
+        if index > self.device_num - 1:
+            return
+
         if module_type:
-            for i, ui_port in enumerate(self.ui_port_list):
-                if ui_port.text() == name:
-                    icon_path = os.path.join(self.component_path, "modules", module_type + "_28.png")
-                    pixmap = QtGui.QPixmap()
-                    pixmap.load(icon_path)
-                    self.ui_current_icon_list[i].setPixmap(pixmap)
-                    break
+            icon_path = os.path.join(self.component_path, "modules", module_type + "_28.png")
+            pixmap = QtGui.QPixmap()
+            pixmap.load(icon_path)
+            self.ui_current_icon_list[index].setPixmap(pixmap)
 
-    def progress_value_changed(self, name, current, total):
-        for i, ui_port in enumerate(self.ui_port_list):
-            if ui_port.text() == name:
-                self.ui_current_progress_list[i].setValue(current)
-                self.ui_current_progress_value_list[i].setText(str(current) + "%")
-                self.ui_total_progress_list[i].setValue(total)
-                self.ui_total_progress_value_list[i].setText(str(total) + "%")
-                break
+    def progress_value_changed(self, index, current, total):
+        if index > self.device_num - 1:
+            return
+
+        self.ui_current_progress_list[index].setValue(current)
+        self.ui_current_progress_list[index].repaint()
+        self.ui_current_progress_value_list[index].setText(str(current) + "%")
+        self.ui_total_progress_list[index].setValue(total)
+        self.ui_total_progress_list[index].repaint()
+        self.ui_total_progress_value_list[index].setText(str(total) + "%")
+
 
     def total_progress_value_changed(self, value):
         self.ui.progress_bar_total.setValue(value)
+        self.ui.progress_bar_total.repaint()
 
     def total_progress_status_changed(self, status):
         self.ui.total_status.setText(status)
 
-    def set_error_message(self, name, error_message):
-        for i, ui_port in enumerate(self.ui_port_list):
-            if ui_port.text() == name:
-                self.ui_error_message_list[i].setText(error_message)
-                break
+    def set_error_message(self, index, error_message):
+        if index > self.device_num - 1:
+            return
+
+        self.ui_error_message_list[index].setText(error_message)

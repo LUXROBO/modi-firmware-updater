@@ -61,6 +61,7 @@ class ConnTask(ABC):
 
 class SerTask(ConnTask):
     def __init__(self, verbose=False, port=None):
+        # if verbose:
         print("Initiating serial connection...")
         super().__init__(verbose)
         self.__port = port
@@ -96,7 +97,8 @@ class SerTask(ConnTask):
             self._bus = self.__init_serial(modi_port.device)
             try:
                 self._bus.open()
-                print(f'Serial is open at "{modi_port}"')
+                if self.verbose:
+                    print(f'Serial is open at "{modi_port}"')
                 return
             except SerialException:
                 continue

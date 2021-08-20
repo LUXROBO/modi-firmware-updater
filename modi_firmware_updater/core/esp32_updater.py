@@ -4,18 +4,19 @@ import pathlib
 import sys
 import threading as th
 import time
-import urllib.request as ur
-import zipfile
 from base64 import b64decode, b64encode
 from io import open
 from os import path
-from urllib.error import URLError
 
 import serial
 import serial.tools.list_ports as stl
 
 from modi_firmware_updater.util.connection_util import list_modi_ports
-
+from modi_firmware_updater.util.message_util import (decode_message,
+                                                     parse_message,
+                                                     unpack_data)
+from modi_firmware_updater.util.module_util import (Module,
+                                                    get_module_type_from_uuid)
 
 def retry(exception_to_catch):
     def decorator(func):
@@ -47,7 +48,7 @@ class ESP32FirmwareUpdater(serial.Serial):
         self.print = True
         if device != None:
             super().__init__(
-                device, timeout=0.1, baudrate=921600
+                device, timeout = 0.1, baudrate = 921600
             )
         else:
             modi_ports = list_modi_ports()
@@ -73,7 +74,6 @@ class ESP32FirmwareUpdater(serial.Serial):
             "modi_ota_factory.bin",
             "esp32.bin",
         ]
-        self.id = None
         self.version = None
         self.__version_to_update = None
 
@@ -87,10 +87,7 @@ class ESP32FirmwareUpdater(serial.Serial):
         self.update_error = 0
         self.update_error_message = ""
 
-        for device in stl.comports():
-            if self.name == device.name:
-                self.location = device.location
-                break
+        self.network_uuid = None
 
     def set_ui(self, ui):
         self.ui = ui
@@ -103,15 +100,13 @@ class ESP32FirmwareUpdater(serial.Serial):
 
     def update_firmware(self, update_interpreter=False, force=False):
         if update_interpreter:
-            self.__print("Reset interpreter...")
-
             self.current_sequence = 0
             self.total_sequence = 1
-            self.update_in_progress = True
+            self.__print("get network uuid")
+            self.network_uuid = self.get_network_uuid()
 
-            self.__boot_to_app()
-            self.id = self.__get_esp_id()
-            time.sleep(1)
+            self.__print("Reset interpreter...")
+            self.update_in_progress = True
 
             self.write(b'{"c":160,"s":0,"d":18,"b":"AAMAAAAA","l":6}')
             self.__print("ESP interpreter reset is complete!!")
@@ -138,13 +133,15 @@ class ESP32FirmwareUpdater(serial.Serial):
                 else:
                     self.ui.update_network_esp32_interpreter.setText("네트워크 모듈 인터프리터 초기화")
         else:
+            self.__print("get network uuid")
+            self.network_uuid = self.get_network_uuid()
+
             self.__print("Turning interpreter off...")
             self.write(b'{"c":160,"s":0,"d":18,"b":"AAMAAAAA","l":6}')
 
             self.update_in_progress = True
             self.__boot_to_app()
             self.__version_to_update = self.__get_latest_version()
-            self.id = self.__get_esp_id()
             self.version = self.__get_esp_version()
             if self.version and self.version == self.__version_to_update:
                 if not force and not self.ui:
@@ -169,11 +166,19 @@ class ESP32FirmwareUpdater(serial.Serial):
             self.__set_esp_version(self.__version_to_update)
             self.__print("ESP firmware update is complete!!")
 
-            time.sleep(1)
-            self.update_in_progress = False
+            self.current_sequence = 100
+            self.total_sequence = 100
+            if self.ui:
+                if self.ui.is_english:
+                    self.ui.update_network_esp32.setText("Network ESP32 update is in progress. (100%)")
+                else:
+                    self.ui.update_network_esp32.setText("네트워크 모듈 업데이트가 진행중입니다. (100%)")
+
+            time.sleep(1.5)
             self.flushInput()
             self.flushOutput()
             self.close()
+            self.update_in_progress = False
             self.update_error = 1
 
             if self.ui:
@@ -187,6 +192,26 @@ class ESP32FirmwareUpdater(serial.Serial):
                     self.ui.update_network_esp32.setText("Update Network ESP32")
                 else:
                     self.ui.update_network_esp32.setText("네트워크 모듈 업데이트")
+
+    def get_network_uuid(self):
+        init_time = time.time()
+        while True:
+            get_uuid_pkt = b'{"c":40,"s":4095,"d":4095,"b":"//8AAAAAAAA=","l":8}'
+            self.write(get_uuid_pkt)
+            try:
+                json_msg = json.loads(self.__wait_for_json())
+                if json_msg["c"] == 0x05 or json_msg["c"] == 0x0A:
+                    module_uuid = unpack_data(json_msg["b"], (6, 2))[0]
+                    module_type = get_module_type_from_uuid(module_uuid)
+                    if module_type == "network":
+                        return module_uuid
+            except json.decoder.JSONDecodeError as jde:
+                self.__print("json parse error: " + str(jde))
+
+            if time.time() - init_time > 5:
+                return None
+
+            time.sleep(0.2)
 
     def __device_ready(self):
         self.__print("Redirecting connection to esp device...")
@@ -300,20 +325,20 @@ class ESP32FirmwareUpdater(serial.Serial):
             time.sleep(0.1)
         return json_msg
 
-    def __get_esp_id(self):
-        json_msg = json.loads(self.__wait_for_json())
-        while json_msg["c"] != 0:
-            json_msg = json.loads(self.__wait_for_json())
-        return json_msg["s"]
-
     def __get_esp_version(self):
-        get_version_pkt = b'{"c":160,"s":25,"d":4095,"b":"AAAAAAAAAA==","l":8}'
-        self.write(get_version_pkt)
-        json_msg = json.loads(self.__wait_for_json())
         init_time = time.time()
-        while json_msg["c"] != 0xA1:
+
+        while True:
+            get_version_pkt = b'{"c":160,"s":25,"d":4095,"b":"AAAAAAAAAA==","l":8}'
             self.write(get_version_pkt)
-            json_msg = json.loads(self.__wait_for_json())
+
+            try:
+                json_msg = json.loads(self.__wait_for_json())
+                if json_msg["c"] == 0xA1:
+                    break
+            except json.decoder.JSONDecodeError as jde:
+                self.__print("json parse error: " + str(jde))
+
             if time.time() - init_time > 1:
                 return None
         ver = b64decode(json_msg["b"]).lstrip(b"\x00")
@@ -329,12 +354,19 @@ class ESP32FirmwareUpdater(serial.Serial):
             f'"b":"{version_text}","l":8' + "}"
         )
         version_msg_enc = version_msg.encode("utf8")
-        self.write(version_msg_enc)
 
-        while json.loads(self.__wait_for_json())["c"] != 0xA1:
+        while True:
+            self.write(version_msg_enc)
+            try:
+                json_msg = json.loads(self.__wait_for_json())
+                if json_msg["c"] == 0xA1:
+                    break
+                self.__boot_to_app()
+            except json.decoder.JSONDecodeError as jde:
+                self.__print("json parse error: " + str(jde))
+
             time.sleep(0.5)
-            self.__boot_to_app()
-            self.write(version_msg.encode("utf8"))
+
         self.__print("The version info has been set!!")
 
     def __compose_binary_firmware(self):
@@ -418,12 +450,12 @@ class ESP32FirmwareUpdater(serial.Serial):
             manager.quit()
         if self.ui:
             if self.ui.is_english:
-                self.ui.update_network_esp32.setText("Network ESP32 update is in progress. (100%)")
+                self.ui.update_network_esp32.setText("Network ESP32 update is in progress. (99%)")
             else:
-                self.ui.update_network_esp32.setText("네트워크 모듈 업데이트가 진행중입니다. (100%)")
-        self.current_sequence = 1
-        self.total_sequence = 1
-        self.__print(f"\r{self.__progress_bar(1, 1)}")
+                self.ui.update_network_esp32.setText("네트워크 모듈 업데이트가 진행중입니다. (99%)")
+        self.current_sequence = 99
+        self.total_sequence = 100
+        self.__print(f"\r{self.__progress_bar(99, 100)}")
         self.__print("Firmware Upload Complete")
 
     def __write_chunk(self, chunk, curr_seq, total_seq, manager):
@@ -478,7 +510,8 @@ class ESP32FirmwareMultiUpdater():
 
     def update_firmware(self, modi_ports, update_interpreter=False, force=True):
         self.esp32_updaters = []
-        self.device_list = []
+        self.network_uuid = []
+        self.state = []
 
         for i, modi_port in enumerate(modi_ports):
             if i > 9:
@@ -491,69 +524,72 @@ class ESP32FirmwareMultiUpdater():
                 print(e)
             else:
                 self.esp32_updaters.append(esp32_updater)
-                self.device_list.append(esp32_updater.location)
+                self.state.append(0)
+                self.network_uuid.append('')
 
         if self.list_ui:
-            self.list_ui.set_device_list(self.device_list)
+            self.list_ui.set_device_num(len(self.esp32_updaters))
             self.list_ui.ui.close_button.setEnabled(False)
 
         self.update_in_progress = True
 
-        state = {}
-        for esp32_updater in self.esp32_updaters:
+        for index, esp32_updater in enumerate(self.esp32_updaters):
             th.Thread(
                 target=esp32_updater.update_firmware,
                 args=(update_interpreter, force),
                 daemon=True
             ).start()
-            state[esp32_updater.location] = 0
 
+        delay = 0.1
         while True:
             is_done = True
             current_sequence = 0
             total_sequence = 0
 
-            for esp32_updater in self.esp32_updaters:
-                if self.list_ui and esp32_updater.id:
-                    self.list_ui.network_id_signal.emit(esp32_updater.location, esp32_updater.id)
-
-                if state[esp32_updater.location] == 0:
-                    # wait
-                    is_done = is_done & False
+            for index, esp32_updater in enumerate(self.esp32_updaters):
+                if self.state[index] == 0:
+                    # wait for network uuid
+                    is_done = False
                     if esp32_updater.update_in_progress:
-                        state[esp32_updater.location] = 1
-                elif state[esp32_updater.location] == 1:
+                        if esp32_updater.network_uuid:
+                            self.network_uuid[index] = f'0x{esp32_updater.network_uuid:X}'
+                            self.state[index] = 1
+                            if self.list_ui:
+                                self.list_ui.network_uuid_signal.emit(index, self.network_uuid[index])
+                        else:
+                            self.state[index] = 2
+                            esp32_updater.update_error = -1
+                            esp32_updater.update_error_message = "Not response network uuid"
+                elif self.state[index] == 1:
                     # update modules
                     if esp32_updater.update_error == 0:
                         is_done = is_done & False
-                        for i, ui_port in enumerate(self.list_ui.ui_port_list):
-                            if ui_port.text() == esp32_updater.location:
-                                current = esp32_updater.current_sequence
-                                total = esp32_updater.total_sequence
+                        current = esp32_updater.current_sequence
+                        total = esp32_updater.total_sequence
 
-                                if total != 0:
-                                    value = current / total * 100.0
+                        value = 0 if total == 0 else current / total * 100.0
 
-                                    current_sequence += current
-                                    total_sequence += total
+                        current_sequence += current
+                        total_sequence += total
 
-                                    if self.list_ui:
-                                        self.list_ui.progress_signal.emit(esp32_updater.location, value)
-                                break
+                        if self.list_ui:
+                            self.list_ui.progress_signal.emit(index, value)
                     else:
-                        state[esp32_updater.location] = 2
-                elif state[esp32_updater.location] == 2:
+                        self.state[index] = 2
+                elif self.state[index] == 2:
                     # end
                     current_sequence += esp32_updater.total_sequence
                     total_sequence += esp32_updater.total_sequence
                     if esp32_updater.update_error == 1:
                         if self.list_ui:
-                            self.list_ui.network_state_signal.emit(esp32_updater.location, 0)
-                            self.list_ui.progress_signal.emit(esp32_updater.location, 100)
+                            self.list_ui.network_state_signal.emit(index, 0)
+                            self.list_ui.progress_signal.emit(index, 100)
                     else:
                         if self.list_ui:
-                            self.list_ui.network_state_signal.emit(esp32_updater.location, -1)
-                    state[esp32_updater.location] = 3
+                            self.list_ui.network_state_signal.emit(index, -1)
+                            self.list_ui.error_message_signal.emit(index, esp32_updater.update_error_message)
+
+                    self.state[index] = 3
 
             if total_sequence != 0:
                 if self.ui:
@@ -589,7 +625,7 @@ class ESP32FirmwareMultiUpdater():
             if is_done:
                 break
 
-            time.sleep(0.1)
+            time.sleep(delay)
 
         self.update_in_progress = False
 

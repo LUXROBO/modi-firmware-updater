@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1313</width>
-    <height>453</height>
+    <width>1093</width>
+    <height>425</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -63,46 +63,10 @@
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
       <layout class="QGridLayout" name="gridLayout">
-       <item row="3" column="2">
+       <item row="2" column="2">
         <widget class="QLabel" name="progress_current_value_1">
          <property name="text">
           <string>0%</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="1">
-        <widget class="QProgressBar" name="progress_bar_total_1">
-         <property name="value">
-          <number>0</number>
-         </property>
-         <property name="textVisible">
-          <bool>false</bool>
-         </property>
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="textDirection">
-          <enum>QProgressBar::TopToBottom</enum>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="1">
-        <widget class="QLabel" name="network_id_1">
-         <property name="text">
-          <string>Network ID</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QLabel" name="port_1">
-         <property name="text">
-          <string>Port name</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
@@ -119,7 +83,17 @@
          </property>
         </widget>
        </item>
-       <item row="3" column="1">
+       <item row="2" column="0">
+        <widget class="QLabel" name="image_current_1">
+         <property name="text">
+          <string>Image</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
         <widget class="QProgressBar" name="progress_bar_current_1">
          <property name="value">
           <number>0</number>
@@ -135,7 +109,33 @@
          </property>
         </widget>
        </item>
-       <item row="4" column="2">
+       <item row="3" column="1">
+        <widget class="QProgressBar" name="progress_bar_total_1">
+         <property name="value">
+          <number>0</number>
+         </property>
+         <property name="textVisible">
+          <bool>false</bool>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="textDirection">
+          <enum>QProgressBar::TopToBottom</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLabel" name="network_id_1">
+         <property name="text">
+          <string>Network ID</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="2">
         <widget class="QLabel" name="progress_total_value_1">
          <property name="text">
           <string>0%</string>
@@ -145,17 +145,7 @@
          </property>
         </widget>
        </item>
-       <item row="3" column="0">
-        <widget class="QLabel" name="image_current_1">
-         <property name="text">
-          <string>Image</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="1">
+       <item row="4" column="1">
         <widget class="QLabel" name="error_message_1">
          <property name="text">
           <string/>
@@ -182,16 +172,6 @@
      </item>
      <item>
       <layout class="QGridLayout" name="gridLayout_2">
-       <item row="3" column="2">
-        <widget class="QLabel" name="progress_current_value_2">
-         <property name="text">
-          <string>0%</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
        <item row="0" column="1">
         <widget class="QLabel" name="image_2">
          <property name="text">
@@ -202,7 +182,27 @@
          </property>
         </widget>
        </item>
-       <item row="4" column="1">
+       <item row="2" column="0">
+        <widget class="QLabel" name="image_current_2">
+         <property name="text">
+          <string>Image</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLabel" name="network_id_2">
+         <property name="text">
+          <string>Network ID</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
         <widget class="QProgressBar" name="progress_bar_total_2">
          <property name="value">
           <number>0</number>
@@ -218,8 +218,18 @@
          </property>
         </widget>
        </item>
-       <item row="4" column="2">
-        <widget class="QLabel" name="progress_total_value_2">
+       <item row="4" column="1">
+        <widget class="QLabel" name="error_message_2">
+         <property name="text">
+          <string/>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <widget class="QLabel" name="progress_current_value_2">
          <property name="text">
           <string>0%</string>
          </property>
@@ -228,7 +238,7 @@
          </property>
         </widget>
        </item>
-       <item row="3" column="1">
+       <item row="2" column="1">
         <widget class="QProgressBar" name="progress_bar_current_2">
          <property name="value">
           <number>0</number>
@@ -244,40 +254,10 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="1">
-        <widget class="QLabel" name="network_id_2">
+       <item row="3" column="2">
+        <widget class="QLabel" name="progress_total_value_2">
          <property name="text">
-          <string>Network ID</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0">
-        <widget class="QLabel" name="image_current_2">
-         <property name="text">
-          <string>Image</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QLabel" name="port_2">
-         <property name="text">
-          <string>Port name</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="1">
-        <widget class="QLabel" name="error_message_2">
-         <property name="text">
-          <string/>
+          <string>0%</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
@@ -301,7 +281,7 @@
      </item>
      <item>
       <layout class="QGridLayout" name="gridLayout_3">
-       <item row="3" column="1">
+       <item row="2" column="1">
         <widget class="QProgressBar" name="progress_bar_current_3">
          <property name="value">
           <number>0</number>
@@ -317,20 +297,20 @@
          </property>
         </widget>
        </item>
-       <item row="3" column="0">
-        <widget class="QLabel" name="image_current_3">
+       <item row="1" column="1">
+        <widget class="QLabel" name="network_id_3">
          <property name="text">
-          <string>Image</string>
+          <string>Network ID</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
          </property>
         </widget>
        </item>
-       <item row="2" column="1">
-        <widget class="QLabel" name="network_id_3">
+       <item row="3" column="2">
+        <widget class="QLabel" name="progress_total_value_3">
          <property name="text">
-          <string>Network ID</string>
+          <string>0%</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
@@ -347,37 +327,27 @@
          </property>
         </widget>
        </item>
-       <item row="4" column="2">
-        <widget class="QLabel" name="progress_total_value_3">
-         <property name="text">
-          <string>0%</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="2">
-        <widget class="QLabel" name="progress_current_value_3">
-         <property name="text">
-          <string>0%</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QLabel" name="port_3">
-         <property name="text">
-          <string>Port name</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
        <item row="4" column="1">
+        <widget class="QLabel" name="error_message_3">
+         <property name="text">
+          <string/>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="image_current_3">
+         <property name="text">
+          <string>Image</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
         <widget class="QProgressBar" name="progress_bar_total_3">
          <property name="value">
           <number>0</number>
@@ -393,10 +363,10 @@
          </property>
         </widget>
        </item>
-       <item row="5" column="1">
-        <widget class="QLabel" name="error_message_3">
+       <item row="2" column="2">
+        <widget class="QLabel" name="progress_current_value_3">
          <property name="text">
-          <string/>
+          <string>0%</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
@@ -420,43 +390,17 @@
      </item>
      <item>
       <layout class="QGridLayout" name="gridLayout_4">
+       <item row="4" column="1">
+        <widget class="QLabel" name="error_message_4">
+         <property name="text">
+          <string/>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
        <item row="1" column="1">
-        <widget class="QLabel" name="port_4">
-         <property name="text">
-          <string>Port name</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="1">
-        <widget class="QProgressBar" name="progress_bar_current_4">
-         <property name="value">
-          <number>0</number>
-         </property>
-         <property name="textVisible">
-          <bool>false</bool>
-         </property>
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="textDirection">
-          <enum>QProgressBar::TopToBottom</enum>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="2">
-        <widget class="QLabel" name="progress_current_value_4">
-         <property name="text">
-          <string>0%</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="1">
         <widget class="QLabel" name="network_id_4">
          <property name="text">
           <string>Network ID</string>
@@ -466,17 +410,7 @@
          </property>
         </widget>
        </item>
-       <item row="4" column="2">
-        <widget class="QLabel" name="progress_total_value_4">
-         <property name="text">
-          <string>0%</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="1">
+       <item row="3" column="1">
         <widget class="QProgressBar" name="progress_bar_total_4">
          <property name="value">
           <number>0</number>
@@ -492,6 +426,42 @@
          </property>
         </widget>
        </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="image_current_4">
+         <property name="text">
+          <string>Image</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QProgressBar" name="progress_bar_current_4">
+         <property name="value">
+          <number>0</number>
+         </property>
+         <property name="textVisible">
+          <bool>false</bool>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="textDirection">
+          <enum>QProgressBar::TopToBottom</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <widget class="QLabel" name="progress_current_value_4">
+         <property name="text">
+          <string>0%</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
        <item row="0" column="1">
         <widget class="QLabel" name="image_4">
          <property name="text">
@@ -502,20 +472,10 @@
          </property>
         </widget>
        </item>
-       <item row="3" column="0">
-        <widget class="QLabel" name="image_current_4">
+       <item row="3" column="2">
+        <widget class="QLabel" name="progress_total_value_4">
          <property name="text">
-          <string>Image</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="1">
-        <widget class="QLabel" name="error_message_4">
-         <property name="text">
-          <string/>
+          <string>0%</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
@@ -539,7 +499,7 @@
      </item>
      <item>
       <layout class="QGridLayout" name="gridLayout_5">
-       <item row="3" column="1">
+       <item row="2" column="1">
         <widget class="QProgressBar" name="progress_bar_current_5">
          <property name="value">
           <number>0</number>
@@ -555,10 +515,20 @@
          </property>
         </widget>
        </item>
-       <item row="3" column="0">
-        <widget class="QLabel" name="image_current_5">
+       <item row="2" column="2">
+        <widget class="QLabel" name="progress_current_value_5">
          <property name="text">
-          <string>Image</string>
+          <string>0%</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="2">
+        <widget class="QLabel" name="progress_total_value_5">
+         <property name="text">
+          <string>0%</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
@@ -566,18 +536,22 @@
         </widget>
        </item>
        <item row="4" column="1">
-        <widget class="QProgressBar" name="progress_bar_total_5">
-         <property name="value">
-          <number>0</number>
+        <widget class="QLabel" name="error_message_5">
+         <property name="text">
+          <string/>
          </property>
-         <property name="textVisible">
-          <bool>false</bool>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
          </property>
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLabel" name="network_id_5">
+         <property name="text">
+          <string>Network ID</string>
          </property>
-         <property name="textDirection">
-          <enum>QProgressBar::TopToBottom</enum>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
          </property>
         </widget>
        </item>
@@ -591,53 +565,29 @@
          </property>
         </widget>
        </item>
-       <item row="4" column="2">
-        <widget class="QLabel" name="progress_total_value_5">
+       <item row="2" column="0">
+        <widget class="QLabel" name="image_current_5">
          <property name="text">
-          <string>0%</string>
+          <string>Image</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
          </property>
         </widget>
        </item>
-       <item row="1" column="1">
-        <widget class="QLabel" name="port_5">
-         <property name="text">
-          <string>Port name</string>
+       <item row="3" column="1">
+        <widget class="QProgressBar" name="progress_bar_total_5">
+         <property name="value">
+          <number>0</number>
          </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
+         <property name="textVisible">
+          <bool>false</bool>
          </property>
-        </widget>
-       </item>
-       <item row="2" column="1">
-        <widget class="QLabel" name="network_id_5">
-         <property name="text">
-          <string>Network ID</string>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
          </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="2">
-        <widget class="QLabel" name="progress_current_value_5">
-         <property name="text">
-          <string>0%</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="1">
-        <widget class="QLabel" name="error_message_5">
-         <property name="text">
-          <string/>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
+         <property name="textDirection">
+          <enum>QProgressBar::TopToBottom</enum>
          </property>
         </widget>
        </item>
@@ -662,53 +612,7 @@
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
       <layout class="QGridLayout" name="gridLayout_6">
-       <item row="1" column="1">
-        <widget class="QLabel" name="port_6">
-         <property name="text">
-          <string>Port name</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="1">
-        <widget class="QProgressBar" name="progress_bar_total_6">
-         <property name="value">
-          <number>0</number>
-         </property>
-         <property name="textVisible">
-          <bool>false</bool>
-         </property>
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="textDirection">
-          <enum>QProgressBar::TopToBottom</enum>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="1">
-        <widget class="QLabel" name="network_id_6">
-         <property name="text">
-          <string>Network ID</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0">
-        <widget class="QLabel" name="image_current_6">
-         <property name="text">
-          <string>Image</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="2">
+       <item row="2" column="2">
         <widget class="QLabel" name="progress_current_value_6">
          <property name="text">
           <string>0%</string>
@@ -718,17 +622,7 @@
          </property>
         </widget>
        </item>
-       <item row="4" column="2">
-        <widget class="QLabel" name="progress_total_value_6">
-         <property name="text">
-          <string>0%</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="1">
+       <item row="2" column="1">
         <widget class="QProgressBar" name="progress_bar_current_6">
          <property name="value">
           <number>0</number>
@@ -744,6 +638,42 @@
          </property>
         </widget>
        </item>
+       <item row="3" column="1">
+        <widget class="QProgressBar" name="progress_bar_total_6">
+         <property name="value">
+          <number>0</number>
+         </property>
+         <property name="textVisible">
+          <bool>false</bool>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="textDirection">
+          <enum>QProgressBar::TopToBottom</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QLabel" name="error_message_6">
+         <property name="text">
+          <string/>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="2">
+        <widget class="QLabel" name="progress_total_value_6">
+         <property name="text">
+          <string>0%</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
        <item row="0" column="1">
         <widget class="QLabel" name="image_6">
          <property name="text">
@@ -754,10 +684,20 @@
          </property>
         </widget>
        </item>
-       <item row="5" column="1">
-        <widget class="QLabel" name="error_message_6">
+       <item row="2" column="0">
+        <widget class="QLabel" name="image_current_6">
          <property name="text">
-          <string/>
+          <string>Image</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLabel" name="network_id_6">
+         <property name="text">
+          <string>Network ID</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
@@ -781,52 +721,6 @@
      </item>
      <item>
       <layout class="QGridLayout" name="gridLayout_7">
-       <item row="1" column="1">
-        <widget class="QLabel" name="port_7">
-         <property name="text">
-          <string>Port name</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="1">
-        <widget class="QProgressBar" name="progress_bar_total_7">
-         <property name="value">
-          <number>0</number>
-         </property>
-         <property name="textVisible">
-          <bool>false</bool>
-         </property>
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="textDirection">
-          <enum>QProgressBar::TopToBottom</enum>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="1">
-        <widget class="QLabel" name="network_id_7">
-         <property name="text">
-          <string>Network ID</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="2">
-        <widget class="QLabel" name="progress_total_value_7">
-         <property name="text">
-          <string>0%</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
        <item row="0" column="1">
         <widget class="QLabel" name="image_7">
          <property name="text">
@@ -837,17 +731,7 @@
          </property>
         </widget>
        </item>
-       <item row="3" column="0">
-        <widget class="QLabel" name="image_current_7">
-         <property name="text">
-          <string>Image</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="1">
+       <item row="2" column="1">
         <widget class="QProgressBar" name="progress_bar_current_7">
          <property name="value">
           <number>0</number>
@@ -863,7 +747,7 @@
          </property>
         </widget>
        </item>
-       <item row="3" column="2">
+       <item row="2" column="2">
         <widget class="QLabel" name="progress_current_value_7">
          <property name="text">
           <string>0%</string>
@@ -873,7 +757,53 @@
          </property>
         </widget>
        </item>
-       <item row="5" column="1">
+       <item row="1" column="1">
+        <widget class="QLabel" name="network_id_7">
+         <property name="text">
+          <string>Network ID</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="2">
+        <widget class="QLabel" name="progress_total_value_7">
+         <property name="text">
+          <string>0%</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QProgressBar" name="progress_bar_total_7">
+         <property name="value">
+          <number>0</number>
+         </property>
+         <property name="textVisible">
+          <bool>false</bool>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="textDirection">
+          <enum>QProgressBar::TopToBottom</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="image_current_7">
+         <property name="text">
+          <string>Image</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
         <widget class="QLabel" name="error_message_7">
          <property name="text">
           <string/>
@@ -900,7 +830,23 @@
      </item>
      <item>
       <layout class="QGridLayout" name="gridLayout_8">
-       <item row="4" column="2">
+       <item row="2" column="1">
+        <widget class="QProgressBar" name="progress_bar_current_8">
+         <property name="value">
+          <number>0</number>
+         </property>
+         <property name="textVisible">
+          <bool>false</bool>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="textDirection">
+          <enum>QProgressBar::TopToBottom</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="2">
         <widget class="QLabel" name="progress_total_value_8">
          <property name="text">
           <string>0%</string>
@@ -911,19 +857,19 @@
         </widget>
        </item>
        <item row="1" column="1">
-        <widget class="QLabel" name="port_8">
+        <widget class="QLabel" name="network_id_8">
          <property name="text">
-          <string>Port name</string>
+          <string>Network ID</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
          </property>
         </widget>
        </item>
-       <item row="3" column="2">
-        <widget class="QLabel" name="progress_current_value_8">
+       <item row="4" column="1">
+        <widget class="QLabel" name="error_message_8">
          <property name="text">
-          <string>0%</string>
+          <string/>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
@@ -940,7 +886,17 @@
          </property>
         </widget>
        </item>
-       <item row="4" column="1">
+       <item row="2" column="0">
+        <widget class="QLabel" name="image_current_8">
+         <property name="text">
+          <string>Image</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
         <widget class="QProgressBar" name="progress_bar_total_8">
          <property name="value">
           <number>0</number>
@@ -956,46 +912,10 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="1">
-        <widget class="QLabel" name="network_id_8">
+       <item row="2" column="2">
+        <widget class="QLabel" name="progress_current_value_8">
          <property name="text">
-          <string>Network ID</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="1">
-        <widget class="QProgressBar" name="progress_bar_current_8">
-         <property name="value">
-          <number>0</number>
-         </property>
-         <property name="textVisible">
-          <bool>false</bool>
-         </property>
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="textDirection">
-          <enum>QProgressBar::TopToBottom</enum>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0">
-        <widget class="QLabel" name="image_current_8">
-         <property name="text">
-          <string>Image</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="1">
-        <widget class="QLabel" name="error_message_8">
-         <property name="text">
-          <string/>
+          <string>0%</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
@@ -1019,63 +939,7 @@
      </item>
      <item>
       <layout class="QGridLayout" name="gridLayout_9">
-       <item row="2" column="1">
-        <widget class="QLabel" name="network_id_9">
-         <property name="text">
-          <string>Network ID</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="1">
-        <widget class="QProgressBar" name="progress_bar_total_9">
-         <property name="value">
-          <number>0</number>
-         </property>
-         <property name="textVisible">
-          <bool>false</bool>
-         </property>
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="textDirection">
-          <enum>QProgressBar::TopToBottom</enum>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0">
-        <widget class="QLabel" name="image_current_9">
-         <property name="text">
-          <string>Image</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QLabel" name="port_9">
-         <property name="text">
-          <string>Port name</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
        <item row="3" column="2">
-        <widget class="QLabel" name="progress_current_value_9">
-         <property name="text">
-          <string>0%</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="2">
         <widget class="QLabel" name="progress_total_value_9">
          <property name="text">
           <string>0%</string>
@@ -1085,7 +949,7 @@
          </property>
         </widget>
        </item>
-       <item row="3" column="1">
+       <item row="2" column="1">
         <widget class="QProgressBar" name="progress_bar_current_9">
          <property name="value">
           <number>0</number>
@@ -1101,6 +965,26 @@
          </property>
         </widget>
        </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="image_current_9">
+         <property name="text">
+          <string>Image</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <widget class="QLabel" name="progress_current_value_9">
+         <property name="text">
+          <string>0%</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
        <item row="0" column="1">
         <widget class="QLabel" name="image_9">
          <property name="text">
@@ -1111,13 +995,39 @@
          </property>
         </widget>
        </item>
-       <item row="5" column="1">
+       <item row="1" column="1">
+        <widget class="QLabel" name="network_id_9">
+         <property name="text">
+          <string>Network ID</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
         <widget class="QLabel" name="error_message_9">
          <property name="text">
           <string/>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QProgressBar" name="progress_bar_total_9">
+         <property name="value">
+          <number>0</number>
+         </property>
+         <property name="textVisible">
+          <bool>false</bool>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="textDirection">
+          <enum>QProgressBar::TopToBottom</enum>
          </property>
         </widget>
        </item>
@@ -1138,42 +1048,6 @@
      </item>
      <item>
       <layout class="QGridLayout" name="gridLayout_10">
-       <item row="3" column="1">
-        <widget class="QProgressBar" name="progress_bar_current_10">
-         <property name="value">
-          <number>0</number>
-         </property>
-         <property name="textVisible">
-          <bool>false</bool>
-         </property>
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="textDirection">
-          <enum>QProgressBar::TopToBottom</enum>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="2">
-        <widget class="QLabel" name="progress_current_value_10">
-         <property name="text">
-          <string>0%</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="1">
-        <widget class="QLabel" name="network_id_10">
-         <property name="text">
-          <string>Network ID</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
        <item row="0" column="1">
         <widget class="QLabel" name="image_10">
          <property name="text">
@@ -1184,7 +1058,17 @@
          </property>
         </widget>
        </item>
-       <item row="4" column="1">
+       <item row="3" column="2">
+        <widget class="QLabel" name="progress_total_value_10">
+         <property name="text">
+          <string>0%</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
         <widget class="QProgressBar" name="progress_bar_total_10">
          <property name="value">
           <number>0</number>
@@ -1200,7 +1084,27 @@
          </property>
         </widget>
        </item>
-       <item row="3" column="0">
+       <item row="1" column="1">
+        <widget class="QLabel" name="network_id_10">
+         <property name="text">
+          <string>Network ID</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <widget class="QLabel" name="progress_current_value_10">
+         <property name="text">
+          <string>0%</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
         <widget class="QLabel" name="image_current_10">
          <property name="text">
           <string>Image</string>
@@ -1210,27 +1114,23 @@
          </property>
         </widget>
        </item>
-       <item row="4" column="2">
-        <widget class="QLabel" name="progress_total_value_10">
-         <property name="text">
-          <string>0%</string>
+       <item row="2" column="1">
+        <widget class="QProgressBar" name="progress_bar_current_10">
+         <property name="value">
+          <number>0</number>
          </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
+         <property name="textVisible">
+          <bool>false</bool>
          </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QLabel" name="port_10">
-         <property name="text">
-          <string>Port name</string>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
          </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
+         <property name="textDirection">
+          <enum>QProgressBar::TopToBottom</enum>
          </property>
         </widget>
        </item>
-       <item row="5" column="1">
+       <item row="4" column="1">
         <widget class="QLabel" name="error_message_10">
          <property name="text">
           <string/>
