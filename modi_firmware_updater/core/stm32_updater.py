@@ -2,16 +2,19 @@ import json
 import sys
 import threading as th
 import time
+from base64 import b64decode, b64encode
 from io import open
 from os import path
-from itertools import zip_longest
 
 import serial
 import serial.tools.list_ports as stl
 
-from modi_firmware_updater.util.connection_util import list_modi_ports
-from modi_firmware_updater.util.message_util import (parse_message, unpack_data)
-from modi_firmware_updater.util.module_util import (Module, get_module_type_from_uuid)
+from modi_firmware_updater.util.connection_util import SerTask
+from modi_firmware_updater.util.message_util import (decode_message,
+                                                     parse_message,
+                                                     unpack_data)
+from modi_firmware_updater.util.module_util import (Module,
+                                                    get_module_type_from_uuid)
 
 
 def retry(exception_to_catch):
@@ -27,7 +30,7 @@ def retry(exception_to_catch):
     return decorator
 
 
-class STM32FirmwareUpdater(serial.Serial):
+class STM32FirmwareUpdater:
     """STM32 Firmware Updater: Updates a firmware of given module"""
 
     NO_ERROR = 0
@@ -39,49 +42,45 @@ class STM32FirmwareUpdater(serial.Serial):
     ERASE_ERROR = 6
     ERASE_COMPLETE = 7
 
-    def __init__(self, device=None):
+    def __init__(
+        self, port=None, is_os_update=True, target_ids=(0xFFF,), conn_type="ser"
+    ):
         self.print = True
-        if device != None:
-            super().__init__(
-                device, timeout = 0.1, baudrate = 921600
-            )
-        else:
-            modi_ports = list_modi_ports()
-            if not modi_ports:
-                raise serial.SerialException("No MODI port is connected")
-            for modi_port in modi_ports:
-                try:
-                    super().__init__(
-                        modi_port.device, timeout=0.1, baudrate=921600
-                    )
-                except Exception:
-                    self.__print('Next network module')
-                    continue
-                else:
-                    break
-            self.__print(f"Connecting to MODI network module at {modi_port.device}")
-
-        self.network_version = None
-        self.network_uuid = None
-        self.network_id = None
-
+        self.conn_type = conn_type
+        self.__target_ids = target_ids
+        self.response_flag = False
+        self.response_error_flag = False
+        self.response_error_count = 0
+        self.__running = True
+        self.__is_os_update = is_os_update
         self.update_in_progress = False
-        self.ui = None
-
-        self.progress = 0
-        self.module_type = None
+        self.update_module_num = 0
         self.modules_to_update = []
         self.modules_updated = []
-        self.modules_find = False
-
+        self.network_id = None
+        self.network_version = None
+        self.ui = None
+        self.module_type = None
+        self.progress = None
+        self.popup_reconnect = False
         self.raise_error_message = True
         self.update_error = 0
         self.update_error_message = ""
 
+        self.open(port)
         for device in stl.comports():
             if self.name == device.name:
                 self.location = device.location
                 break
+
+        self.network_uuid = None
+        self.request_network_id()
+
+    def __del__(self):
+        try:
+            self.close()
+        except serial.SerialException:
+            self.__print("Magic del is called with an exception")
 
     def set_ui(self, ui):
         self.ui = ui
@@ -92,376 +91,219 @@ class STM32FirmwareUpdater(serial.Serial):
     def set_raise_error(self, raise_error_message):
         self.raise_error_message = raise_error_message
 
-    def get_network_info(self):
-        timeout = 3
-        init_time = time.time()
-        while True:
-            self.__print("request uuid")
-            self.send_request_network_uuid()
-            self.__print("wait for request")
-            recved = self.wait_for_json(timeout)
+    def request_network_id(self):
+        self.__conn.send_nowait(
+            parse_message(0x28, 0xFFF, 0xFFF, (0xFF, 0x0F))
+        )
 
-            if time.time() - init_time > timeout or not recved:
-                return None, None
-
-            try:
-                json_msg = json.loads(recved)
-                if json_msg["c"] == 0x05:
-                    unpacked_data = unpack_data(json_msg["b"], (6, 2))
-                    module_uuid = unpacked_data[0]
-                    module_version_digits = unpacked_data[1]
-                    module_type = get_module_type_from_uuid(module_uuid)
-                    if module_type == "network":
-                        module_version = [
-                            str((module_version_digits & 0xE000) >> 13),  # major
-                            str((module_version_digits & 0x1F00) >> 8),  # minor
-                            str(module_version_digits & 0x00FF)   # patch
-                        ]
-                        return module_uuid , ".".join(module_version)
-                elif json_msg["c"] == 0x0A:
-                    module_uuid = unpack_data(json_msg["b"], (6, 2))[0]
-                    module_type = get_module_type_from_uuid(module_uuid)
-                    if module_type == "network":
-                        return module_uuid , None
-            except json.decoder.JSONDecodeError as jde:
-                self.__print("json parse error: " + str(jde))
-
-            time.sleep(0.2)
-
-    def send_request_network_uuid(self):
-        send_pkt = parse_message(0x28, 0xFFF, 0xFFF, (0xFF, 0xFF))
-        if self.is_open:
-            self.write(send_pkt.encode("utf8"))
-            self.reset_input_buffer()
-
-    def send_set_network_module_state(self, did, module_state, pnp_state):
-        send_pkt = parse_message(0xA4, 0, did, (module_state, pnp_state))
-        if self.is_open:
-            self.write(send_pkt.encode("utf8"))
-            self.reset_input_buffer()
-
-    def send_set_module_state(self, did, module_state, pnp_state):
-        send_pkt = parse_message(0x09, 0, did, (module_state, pnp_state))
-        if self.is_open:
-            self.write(send_pkt.encode("utf8"))
-            self.reset_input_buffer()
-
-    def send_firmware_command(self, operation_type, module_id, crc_val, page_addr):
-        rot_scmd = 2 if operation_type == "erase" else 1
-
-        cmd = 0x0D
-
-        """ SID is 12-bits length in MODI CAN.
-            To fully utilize its capacity, we split 12-bits into 4 and 8 bits.
-            First 4 bits include rot_scmd information.
-            And the remaining bits represent rot_stype.
-        """
-        sid = (rot_scmd << 8) | 1
-        did = module_id
-
-        """ The firmware command data to be sent is 8-bytes length.
-            Where the first 4 bytes consist of CRC-32 information.
-            Last 4 bytes represent page address information.
-        """
-        crc32_and_page_addr_data = bytearray(8)
-        for i in range(4):
-            crc32_and_page_addr_data[i] = crc_val & 0xFF
-            crc_val >>= 8
-            crc32_and_page_addr_data[4 + i] = page_addr & 0xFF
-            page_addr >>= 8
-        data = crc32_and_page_addr_data
-
-        send_pkt = parse_message(cmd, sid, did, data)
-        if self.is_open:
-            self.write(send_pkt.encode("utf8"))
-            self.reset_input_buffer()
-
-    def receive_firmware_command_response(self, delay = 0.001, timeout = 5):
-        response_wait_time = time.time()
-        while True:
-            responese_success = False
-            response_error = False
-
-            recved = self.wait_for_json(timeout)
-
-            if time.time() - response_wait_time > timeout or not recved:
-                return False
-
-            try:
-                json_msg = json.loads(recved)
-                if json_msg["c"] == 0x0C:
-                    message_decoded = unpack_data(json_msg["b"], (4, 1))
-                    stream_state = message_decoded[1]
-                    if stream_state == self.CRC_ERROR or stream_state == self.ERASE_ERROR:
-                        response_error = True
-                    elif stream_state == self.CRC_COMPLETE or stream_state == self.ERASE_COMPLETE:
-                        responese_success = True
-            except json.decoder.JSONDecodeError as jde:
-                self.__print("json parse error: " + str(jde))
-
-            if responese_success:
-                return True
-
-            if response_error:
-                return False
-
-            time.sleep(delay)
-
-    def send_firmware_data(self, module_id, seq_num, bin_data):
-        cmd = 0x0B
-        sid = seq_num
-        did = module_id
-        data = bytes(bin_data)
-        send_pkt = parse_message(cmd, sid, did, data)
-        if self.is_open:
-            self.write(send_pkt.encode("utf8"))
-            self.reset_input_buffer()
-
-    def set_firmware_command(self, oper_type, module_id, crc_val, page_addr):
-        self.send_firmware_command(oper_type, module_id, crc_val, page_addr)
-        ret = self.receive_firmware_command_response()
-        if not ret and oper_type == "erase":
-            retry_count = 0
-            max_retry = 5
-            while not ret:
-                self.send_firmware_command(oper_type, module_id, crc_val, page_addr)
-                ret = self.receive_firmware_command_response()
-                retry_count += 1
-                if retry_count > max_retry:
-                    break
-        return ret
-
-    def set_firmware_data(self, module_id, seq_num, bin_data, checksum):
-        self.send_firmware_data(module_id, seq_num, bin_data)
-        return self.calc_crc64(bin_data, checksum)
-
-    def set_end_flash_data(self, module_id, end_flash_data):
-        end_flash_success = False
-        page_retry_count = 0
-        page_retry_max_count = 10
-
-        while not end_flash_success:
-            # Erase page (send erase request and receive erase response)
-            erase_page_success = self.set_firmware_command("erase", module_id, 0, 0x0801F800)
-            if not erase_page_success:
-                self.update_error = -1
-                self.update_error_message = "End erase error"
-                return False
-
-            # Send data
-            checksum = self.set_firmware_data(module_id, 0, end_flash_data, 0)
-
-            # CRC on current page (send CRC request and receive CRC response)
-            crc_page_success = self.set_firmware_command("crc", module_id, checksum, 0x0801F800)
-            if not crc_page_success:
-                if self.update_error == -1:
-                    return False
-                else:
-                    page_retry_count += 1
-                    if page_retry_count > page_retry_max_count:
-                        self.update_error = -1
-                        self.update_error_message = "End crc error"
-                        return False
-                    continue
-            else:
-                page_retry_count = 0
-
-            end_flash_success = True
-        self.__print(f"End flash is written for network ({module_id})")
-        return True
+    def __assign_network_id(self, sid, data):
+        unpacked_data = unpack_data(data, (6, 2))
+        module_uuid = unpacked_data[0]
+        module_version_digits = unpacked_data[1]
+        module_type = get_module_type_from_uuid(module_uuid)
+        if module_type == "network":
+            self.network_uuid = module_uuid
+            self.network_id = sid
+            module_version = [
+                str((module_version_digits & 0xE000) >> 13),  # major
+                str((module_version_digits & 0x1F00) >> 8),  # minor
+                str(module_version_digits & 0x00FF)   # patch
+            ]
+            self.network_version = ".".join(module_version)
 
     def update_module_firmware(self):
-        self.__print("update_module_firmware")
-        self.update_in_progress = True
-        self.progress = 0
-        self.__print("get network info")
-        self.network_uuid, self.network_version = self.get_network_info()
+        self.reset_state()
+        for target in self.__target_ids:
+            self.request_to_update_firmware(target)
 
-        if self.network_uuid:
-            self.network_id = self.network_uuid & 0xFFF
-        else:
-            self.__print("no response")
-            self.update_in_progress = False
-            self.update_error = -1
-            self.update_error_message = "Network module no response"
+    def close(self):
+        self.__running = False
+        time.sleep(2)
+        if self.recv_thread:
+            self.recv_thread.join()
+        self.__conn.close_conn()
 
-        time.sleep(1)
+    def open(self, port=None):
+        self.__conn = SerTask(port=port)
+        self.__conn.open_conn()
+        self.name = self.__conn._bus.port
+        self.__running = True
+        self.recv_thread = th.Thread(target=self.__read_conn, daemon=True)
+        self.recv_thread.start()
 
-        # set update firmware state
-        self.send_set_module_state(0xFFF, Module.UPDATE_FIRMWARE, Module.PNP_OFF)
-        self.send_set_module_state(0xFFF, Module.UPDATE_FIRMWARE, Module.PNP_OFF)
-        self.send_set_module_state(0xFFF, Module.UPDATE_FIRMWARE, Module.PNP_OFF)
+    def reinitialize_serial_connection(self, reinit_mode=1):
+        self.__reinitialize_serial_connection()
 
-        # wait warning flag
-        self.__print("wait warning state")
-        timeout = 9
-        init_time = time.time()
-        is_timeout = False
-        wait = 5
-        init_wait = time.time()
-        while True:
-            if time.time() - init_wait > wait:
-                break
+    def __reinitialize_serial_connection(self):
+        self.__print("Temporally disconnecting the serial connection...")
+        self.close()
+        time.sleep(5)
+        self.__print("Re-init serial connection for the update, in 5 seconds...")
+        self.open()
 
-            recved = self.wait_for_json(timeout)
-            if time.time() - init_time > timeout or not recved:
-                is_timeout = True
-                break
-
-            try:
-                json_msg = json.loads(recved)
-                if json_msg["c"] == 0x0A:
-                    unpacked_data = unpack_data(json_msg["b"], (6, 1))
-                    module_uuid = unpacked_data[0]
-                    module_id = module_uuid & 0xFFF
-                    warning_type = unpacked_data[1]
-                    module_type = get_module_type_from_uuid(module_uuid)
-                    if module_type != "network":
-                        if warning_type == 1:
-                            self.send_set_module_state(module_id, Module.UPDATE_FIRMWARE_READY, Module.PNP_OFF)
-                        if  warning_type == 2:
-                            has_item = False
-                            for curr_module_id, curr_module_type in self.modules_to_update:
-                                if module_id == curr_module_id:
-                                    has_item = True
-                                    break
-
-                            for curr_module_id, curr_module_type in self.modules_updated:
-                                if module_id == curr_module_id:
-                                    has_item = True
-                                    return
-
-                            if not has_item:
-                                self.__print(f"Adding {module_type} ({module_id}) to waiting list..."f"{' ' * 60}")
-                                # Add the module to the waiting list
-                                module_elem = module_id, module_type
-                                self.modules_to_update.append(module_elem)
-            except json.decoder.JSONDecodeError as jde:
-                self.__print("json parse error: " + str(jde))
-
-            time.sleep(0.01)
-
-        if is_timeout:
-            self.update_in_progress = False
-            self.update_error = -1
-            self.update_error_message = "Warning timeout"
-            return
-
-        if len(self.modules_to_update) == 0:
-            self.update_in_progress = False
-            self.update_error = -1
-            self.update_error_message = "No modules"
-            return
-
-        # update network module
-        self.__print("update modules")
-        self.modules_find = True
-        is_success = True
-        for curr_module_id, curr_module_type in self.modules_to_update:
-            self.module_type = curr_module_type
-            self.__print(f"Firmware update {curr_module_type} ({curr_module_id})")
-            update_success = self.update_module(curr_module_id, curr_module_type)
-            if update_success:
-                module_elem = curr_module_id, curr_module_type
-                self.modules_updated.append(module_elem)
-            else:
-                self.__print("update error - " + self.update_error_message)
-                is_success = False
-                break
-
-        # Reboot all connected modules
-        self.send_set_module_state(0xFFF, Module.REBOOT, Module.PNP_OFF)
-        self.__print("Reboot message has been sent to all connected modules")
-
+    def reset_state(self, update_in_progress: bool = False) -> None:
+        self.response_flag = False
+        self.response_error_flag = False
+        self.response_error_count = 0
         self.update_in_progress = False
 
-        if self.is_open:
-            self.flushInput()
-            self.flushOutput()
-            self.close()
+        if not update_in_progress:
+            self.__print("Make sure you have connected module(s) to update")
+            self.__print("Resetting firmware updater's state")
+            self.update_module_num = 0
+            self.modules_to_update = []
+            self.modules_updated = []
 
-        if is_success:
-            self.update_error = 1
+    def request_to_update_firmware(self, module_id) -> None:
+        firmware_update_message = self.__set_module_state(
+            module_id, Module.UPDATE_FIRMWARE, Module.PNP_OFF
+        )
+        self.__conn.send_nowait(firmware_update_message)
+        self.__conn.send_nowait(firmware_update_message)
+        self.__conn.send_nowait(firmware_update_message)
+        self.__print("Firmware update has been requested")
 
-    def update_module(self, module_id, module_type):
-        root_path = path.join(path.dirname(__file__), "..", "assets", "firmware", "latest","stm32")
-        bin_path = path.join(root_path, f"{module_type.lower()}.bin")
-        with open(bin_path, "rb") as bin_file:
-            bin_buffer = bin_file.read()
+    def check_to_update_firmware(self, module_id: int) -> None:
+        firmware_update_ready_message = self.__set_module_state(
+            module_id, Module.UPDATE_FIRMWARE_READY, Module.PNP_OFF
+        )
+        self.__conn.send_nowait(firmware_update_ready_message)
 
-        # Init metadata of the bytes loaded
-        page_retry_count = 0
-        page_retry_max_count = 20
-        page_size = 0x800
-        flash_memory_addr = 0x08000000
+    def add_to_waitlist(self, module_id: int, module_type: str) -> None:
+        # Check if input module already exist in the list
+        for curr_module_id, curr_module_type in self.modules_to_update:
+            if module_id == curr_module_id:
+                return
 
-        bin_size = sys.getsizeof(bin_buffer)
-        bin_begin = 0x9000
-        bin_end = bin_size - ((bin_size - bin_begin) % page_size)
+        # Check if module is already updated
+        for curr_module_id, curr_module_type in self.modules_updated:
+            if module_id == curr_module_id:
+                return
 
-        page_offset = 0
-        for page_begin in range(bin_begin, bin_end + 1, page_size):
-            progress = 100 * page_begin // bin_end
-            self.progress = progress
+        self.__print(
+            f"Adding {module_type} ({module_id}) to waiting list..."
+            f"{' ' * 60}"
+        )
 
-            if self.ui:
-                num_to_update = len(self.modules_to_update)
-                num_updated = len(self.modules_updated)
-                if self.ui.is_english:
-                    self.ui.update_stm32_modules.setText(f"STM32 modules update is in progress. ({num_updated} / {num_to_update + num_updated})({progress}%)")
-                else:
-                    self.ui.update_stm32_modules.setText(f"모듈 초기화가 진행중입니다. ({num_updated} / {num_to_update + num_updated})({progress}%)")
+        # Add the module to the waiting list
+        module_elem = module_id, module_type
+        self.modules_to_update.append(module_elem)
+        self.update_module_num += 1
 
-            self.__print(f"\rUpdating {module_type} ({module_id}) {self.__progress_bar(page_begin, bin_end)} {progress}%", end="")
+    def update_module(self, module_id: int, module_type: str) -> None:
+        if self.update_in_progress:
+            return
 
-            page_end = page_begin + page_size
-            curr_page = bin_buffer[page_begin:page_end]
+        self.update_in_progress = True
+        updater_thread = th.Thread(
+            target=self.__update_firmware, args=(module_id, module_type)
+        )
+        updater_thread.daemon = True
+        updater_thread.start()
 
-            # Skip current page if empty
-            if not sum(curr_page):
-                continue
-            
-            erase_page_success = self.set_firmware_command(
-                oper_type = "erase",
-                module_id = module_id,
-                crc_val = 0,
-                page_addr = flash_memory_addr + page_begin + page_offset
-            )
-            if not erase_page_success:
-                self.update_error = -1
-                self.update_error_message = "Erase response error"
-                return False
+    def update_response(
+        self, response: bool, is_error_response: bool = False
+    ) -> None:
+        if not is_error_response:
+            self.response_flag = response
+        else:
+            self.response_error_flag = response
 
-            checksum = 0
-            for curr_ptr in range(0, page_size, 8):
-                if page_begin + curr_ptr >= bin_size:
-                    break
+    def __update_firmware(self, module_id: int, module_type: str) -> None:
+        self.update_in_progress = True
+        self.module_type = module_type
+        self.modules_updated.append((module_id, module_type))
 
-                curr_data = curr_page[curr_ptr : curr_ptr + 8]
-                checksum = self.set_firmware_data(module_id, curr_ptr // 8, curr_data, checksum)
-                self.__delay(0.002)
+        # Init base root_path, utilizing local binary files
+        root_path = path.join(
+            path.dirname(__file__), "..", "assets", "firmware", "latest","stm32"
+        )
 
-            # CRC on current page (send CRC request / receive CRC response)
-            crc_page_success = self.set_firmware_command(
-                oper_type = "crc",
-                module_id = module_id,
-                crc_val = checksum,
-                page_addr = flash_memory_addr + page_begin + page_offset
-            )
-            if not crc_page_success:
-                page_begin -= page_size
-                page_retry_count += 1
-                if page_retry_count > page_retry_max_count:
-                    self.update_error = -1
-                    self.update_error_message = "CRC response error"
-                    return False
-            else:
-                page_retry_count = 0
+        if self.__is_os_update:
+            bin_path = path.join(root_path, f"{module_type.lower()}.bin")
+            with open(bin_path, "rb") as bin_file:
+                bin_buffer = bin_file.read()
 
-            time.sleep(0.01)
+            # Init metadata of the bytes loaded
+            page_size = 0x800
+            flash_memory_addr = 0x08000000
 
-        self.progress = 99
-        self.__print(f"\rUpdating {module_type} ({module_id}) {self.__progress_bar(99, 100)} 99%")
+            bin_size = sys.getsizeof(bin_buffer)
+            bin_begin = 0x9000
+            bin_end = bin_size - ((bin_size - bin_begin) % page_size)
+
+            page_offset = 0
+            for page_begin in range(bin_begin, bin_end + 1, page_size):
+                # self.progress = 100 * page_begin // bin_end
+                progress = 100 * page_begin // bin_end
+                self.progress = progress
+
+                if self.ui:
+                    update_module_num = self.update_module_num
+                    num_updated = len(self.modules_updated)
+                    if self.ui.is_english:
+                        self.ui.update_stm32_modules.setText(
+                            f"STM32 modules update is in progress. "
+                            f"({num_updated} / "
+                            f"{update_module_num})"
+                            f"({progress}%)"
+                        )
+                    else:
+                        self.ui.update_stm32_modules.setText(
+                            f"모듈 초기화가 진행중입니다. "
+                            f"({num_updated} / "
+                            f"{update_module_num})"
+                            f"({progress}%)"
+                        )
+
+                self.__print(f"\rUpdating {module_type} ({module_id}) {self.__progress_bar(page_begin, bin_end)} {progress}%", end="")
+
+                page_end = page_begin + page_size
+                curr_page = bin_buffer[page_begin:page_end]
+
+                # Skip current page if empty
+                if not sum(curr_page):
+                    continue
+
+                # Erase page (send erase request and receive its response)
+                erase_page_success = self.send_firmware_command(
+                    oper_type="erase",
+                    module_id=module_id,
+                    crc_val=0,
+                    dest_addr=flash_memory_addr,
+                    page_addr=page_begin + page_offset,
+                )
+                if not erase_page_success:
+                    page_begin -= page_size
+                    continue
+                # Copy current page data to the module's memory
+                checksum = 0
+                for curr_ptr in range(0, page_size, 8):
+                    if page_begin + curr_ptr >= bin_size:
+                        break
+
+                    curr_data = curr_page[curr_ptr : curr_ptr + 8]
+                    checksum = self.send_firmware_data(
+                        module_id,
+                        seq_num=curr_ptr // 8,
+                        bin_data=curr_data,
+                        crc_val=checksum,
+                    )
+                    self.__delay(0.002)
+
+                # CRC on current page (send CRC request / receive CRC response)
+                crc_page_success = self.send_firmware_command(
+                    oper_type="crc",
+                    module_id=module_id,
+                    crc_val=checksum,
+                    dest_addr=flash_memory_addr,
+                    page_addr=page_begin + page_offset,
+                )
+                if not crc_page_success:
+                    page_begin -= page_size
+                time.sleep(0.01)
+        self.progress = 100
+        self.__print(f"\rUpdating {module_type} ({module_id}) {self.__progress_bar(1, 1)} 100%")
 
         # Get version info from version_path, using appropriate methods
         version_info, version_file = None, "version.txt"
@@ -483,41 +325,52 @@ class STM32FirmwareUpdater(serial.Serial):
         end_flash_data[0] = 0xAA
         end_flash_data[6] = version & 0xFF
         end_flash_data[7] = (version >> 8) & 0xFF
+        self.send_end_flash_data(module_type, module_id, end_flash_data)
+        self.__print(
+            f"Version info (v{version_info}) has been written to its firmware!"
+        )
 
-        end_flash_success = self.set_end_flash_data(module_id, end_flash_data)
-        if not end_flash_success:
-            return False
-        self.__print(f"Version info (v{version_info}) has been written to its firmware!")
-
-        time.sleep(1)
-
-        self.progress = 100
+        # Firmware update flag down, resetting used flags
         self.__print(f"Firmware update is done for {module_type} ({module_id})")
-        self.__print("Module firmwares have been updated!")
+        self.reset_state(update_in_progress=True)
 
-        return True
+        if self.modules_to_update:
+            self.__print("Processing the next module to update the firmware..")
+            next_module_id, next_module_type = self.modules_to_update.pop(0)
+            self.__update_firmware(next_module_id, next_module_type)
+        else:
+            # Reboot all connected modules
+            reboot_message = self.__set_module_state(
+                0xFFF, Module.REBOOT, Module.PNP_OFF
+            )
+            self.__conn.send_nowait(reboot_message)
+            self.__print("Reboot message has been sent to all connected modules")
+            self.reset_state()
 
-    def read_json(self):
-        json_pkt = b""
-        while json_pkt != b"{":
-            if not self.is_open:
-                return ""
-            json_pkt = self.read()
-            if json_pkt == b"":
-                return ""
-            time.sleep(0.1)
-        json_pkt += self.read_until(b"}")
-        return json_pkt
+            time.sleep(1)
+            self.update_in_progress = False
 
-    def wait_for_json(self, timeout):
-        json_msg = self.read_json()
-        init_time = time.time()
-        while not json_msg:
-            json_msg = self.read_json()
-            time.sleep(0.1)
-            if time.time() - init_time > timeout:
-                return ""
-        return json_msg
+            self.__print("Module firmwares have been updated!")
+            self.close()
+            self.update_error = 1
+
+            if self.ui:
+                self.ui.update_network_stm32.setStyleSheet(
+                    f"border-image: url({self.ui.active_path}); font-size: 16px"
+                )
+                self.ui.update_network_stm32.setEnabled(True)
+                self.ui.update_network_esp32.setStyleSheet(
+                    f"border-image: url({self.ui.active_path}); font-size: 16px"
+                )
+                self.ui.update_network_esp32.setEnabled(True)
+                self.ui.update_network_esp32_interpreter.setStyleSheet(
+                    f"border-image: url({self.ui.active_path}); font-size: 16px"
+                )
+                self.ui.update_network_esp32_interpreter.setEnabled(True)
+                if self.ui.is_english:
+                    self.ui.update_stm32_modules.setText("Update STM32 Modules.")
+                else:
+                    self.ui.update_stm32_modules.setText("모듈 초기화")
 
     @staticmethod
     def __delay(span):
@@ -527,17 +380,110 @@ class STM32FirmwareUpdater(serial.Serial):
         return
 
     @staticmethod
-    def __compare_version(
-        left: str, right: str
-    ) -> int:
-        left_vars = map(int, left.split('.'))
-        right_vars = map(int, right.split('.'))
-        for a, b in zip_longest(left_vars, right_vars, fillvalue = 0):
-            if a > b:
-                return -1
-            elif a < b:
-                return 1
-        return 0
+    def __set_module_state(
+        destination_id: int, module_state: int, pnp_state: int
+    ) -> str:
+        message = dict()
+
+        message["c"] = 0x09
+        message["s"] = 0
+        message["d"] = destination_id
+
+        state_bytes = bytearray(2)
+        state_bytes[0] = module_state
+        state_bytes[1] = pnp_state
+
+        message["b"] = b64encode(bytes(state_bytes)).decode("utf-8")
+        message["l"] = 2
+
+        return json.dumps(message, separators=(",", ":"))
+
+    # TODO: Use retry decorator here
+    @retry(Exception)
+    def send_end_flash_data(
+        self, module_type: str, module_id: int, end_flash_data: bytearray
+    ) -> None:
+        # Write end-flash data until success
+        end_flash_success = False
+        while not end_flash_success:
+
+            # Erase page (send erase request and receive erase response)
+            erase_page_success = self.send_firmware_command(
+                oper_type="erase",
+                module_id=module_id,
+                crc_val=0,
+                dest_addr=0x0801F800,
+            )
+            # TODO: Remove magic number of dest_addr above, try using flash_mem
+            if not erase_page_success:
+                continue
+
+            # Send data
+            checksum = self.send_firmware_data(
+                module_id, seq_num=0, bin_data=end_flash_data, crc_val=0
+            )
+
+            # CRC on current page (send CRC request and receive CRC response)
+            crc_page_success = self.send_firmware_command(
+                oper_type="crc",
+                module_id=module_id,
+                crc_val=checksum,
+                dest_addr=0x0801F800,
+            )
+            if not crc_page_success:
+                continue
+
+            end_flash_success = True
+        self.__print(f"End flash is written for {module_type} ({module_id})")
+
+    def get_firmware_command(
+        self,
+        module_id: int,
+        rot_stype: int,
+        rot_scmd: int,
+        crc32: int,
+        page_addr: int,
+    ) -> str:
+        message = dict()
+        message["c"] = 0x0D
+
+        """ SID is 12-bits length in MODI CAN.
+            To fully utilize its capacity, we split 12-bits into 4 and 8 bits.
+            First 4 bits include rot_scmd information.
+            And the remaining bits represent rot_stype.
+        """
+        message["s"] = (rot_scmd << 8) | rot_stype
+        message["d"] = module_id
+
+        """ The firmware command data to be sent is 8-bytes length.
+            Where the first 4 bytes consist of CRC-32 information.
+            Last 4 bytes represent page address information.
+        """
+        crc32_and_page_addr_data = bytearray(8)
+        for i in range(4):
+            crc32_and_page_addr_data[i] = crc32 & 0xFF
+            crc32 >>= 8
+            crc32_and_page_addr_data[4 + i] = page_addr & 0xFF
+            page_addr >>= 8
+        message["b"] = b64encode(bytes(crc32_and_page_addr_data)).decode(
+            "utf-8"
+        )
+        message["l"] = 8
+
+        return json.dumps(message, separators=(",", ":"))
+
+    def get_firmware_data(
+        self, module_id: int, seq_num: int, bin_data: bytes
+    ) -> str:
+        message = dict()
+        message["c"] = 0x0B
+        message["s"] = seq_num
+        message["d"] = module_id
+
+        message["b"] = b64encode(bytes(bin_data)).decode("utf-8")
+        message["l"] = 8
+
+        return json.dumps(message, separators=(",", ":"))
 
     def calc_crc32(self, data: bytes, crc: int) -> int:
         crc ^= int.from_bytes(data, byteorder="little", signed=False)
@@ -551,15 +497,140 @@ class STM32FirmwareUpdater(serial.Serial):
 
         return crc
 
-    def calc_crc64(self, data, checksum):
+    def calc_crc64(self, data: bytes, checksum: int) -> int:
         checksum = self.calc_crc32(data[:4], checksum)
         checksum = self.calc_crc32(data[4:], checksum)
         return checksum
 
-    def __progress_bar(self, current, total):
+    def send_firmware_command(
+        self,
+        oper_type: str,
+        module_id: int,
+        crc_val: int,
+        dest_addr: int,
+        page_addr: int = 0,
+    ) -> bool:
+        rot_scmd = 2 if oper_type == "erase" else 1
+
+        # Send firmware command request
+        request_message = self.get_firmware_command(
+            module_id, 1, rot_scmd, crc_val, page_addr=dest_addr + page_addr
+        )
+        self.__conn.send_nowait(request_message)
+
+        return self.receive_command_response()
+
+    def receive_command_response(
+        self,
+        response_delay: float = 0.001,
+        response_timeout: float = 5,
+        max_response_error_count: int = 75,
+    ) -> bool:
+        # Receive firmware command response
+        response_wait_time = 0
+        while not self.response_flag:
+            # Calculate timeout at each iteration
+            time.sleep(response_delay)
+            response_wait_time += response_delay
+
+            # If timed-out
+            if response_wait_time > response_timeout:
+                self.update_error_message = "Response timed-out"
+                if self.raise_error_message:
+                    raise Exception(self.update_error_message)
+                else:
+                    self.update_error = -1
+
+            # If error is raised
+            if self.response_error_flag:
+                self.response_error_count += 1
+                if self.response_error_count > max_response_error_count:
+                    self.update_error_message = "Response Errored"
+                    if self.raise_error_message:
+                        raise Exception(self.update_error_message)
+                    else:
+                        self.update_error = -1
+                self.response_error_flag = False
+                return False
+
+        self.response_flag = False
+        return True
+
+    def send_firmware_data(
+        self, module_id: int, seq_num: int, bin_data: bytes, crc_val: int
+    ) -> int:
+        # Send firmware data
+        data_message = self.get_firmware_data(
+            module_id, seq_num=seq_num, bin_data=bin_data
+        )
+        self.__conn.send_nowait(data_message)
+
+        # Calculate crc32 checksum twice
+        checksum = self.calc_crc64(data=bin_data, checksum=crc_val)
+        return checksum
+
+    def __progress_bar(self, current: int, total: int) -> str:
         curr_bar = 50 * current // total
         rest_bar = 50 - curr_bar
         return f"[{'=' * curr_bar}>{'.' * rest_bar}]"
+
+    def __read_conn(self):
+        self.request_network_id()
+        while self.__running:
+            self.__handle_message()
+            time.sleep(0.001)
+
+    def __handle_message(self):
+        try:
+            msg = self.__conn.recv()
+            if not msg:
+                return
+            ins, sid, did, data, length = decode_message(msg)
+        except:
+            return
+        command = {
+            0x05: self.__assign_network_id,
+            0x0A: self.__update_warning,
+            0x0C: self.__update_firmware_state,
+        }.get(ins)
+
+        if command:
+            command(sid, data)
+
+    def __update_firmware_state(self, sid: int, data: str):
+        message_decoded = unpack_data(data, (4, 1))
+        stream_state = message_decoded[1]
+
+        if stream_state == self.CRC_ERROR:
+            self.update_response(response=True, is_error_response=True)
+        elif stream_state == self.CRC_COMPLETE:
+            self.update_response(response=True)
+        elif stream_state == self.ERASE_ERROR:
+            self.update_response(response=True, is_error_response=True)
+        elif stream_state == self.ERASE_COMPLETE:
+            self.update_response(response=True)
+
+    def __update_warning(self, sid: int, data: str) -> None:
+        module_uuid = unpack_data(data, (6, 1))[0]
+        warning_type = unpack_data(data, (6, 1))[1]
+
+        # If warning shows current module works fine, return immediately
+        if not warning_type:
+            return
+
+        module_id = sid
+        module_type = get_module_type_from_uuid(module_uuid)
+        if module_type == "network":
+            self.network_uuid = module_uuid
+
+        if warning_type == 1:
+            self.check_to_update_firmware(module_id)
+        elif warning_type == 2:
+            # Note that more than one warning type 2 message can be received
+            if self.update_in_progress:
+                self.add_to_waitlist(module_id, module_type)
+            else:
+                self.update_module(module_id, module_type)
 
     def __print(self, data, end="\n"):
         if self.print:
@@ -580,13 +651,13 @@ class STM32FirmwareMultiUpdater():
         self.network_uuid = []
         self.state = []
         self.wait_timeout = []
-        self.num_to_update = []
+        self.update_module_num = []
 
         for i, modi_port in enumerate(modi_ports):
             if i > 9:
                 break
             try:
-                stm32_updater = STM32FirmwareUpdater(modi_port.device)
+                stm32_updater = STM32FirmwareUpdater(port = modi_port.device)
                 stm32_updater.set_print(False)
                 stm32_updater.set_raise_error(False)
             except:
@@ -596,7 +667,7 @@ class STM32FirmwareMultiUpdater():
                 self.state.append(-1)
                 self.network_uuid.append('')
                 self.wait_timeout.append(0)
-                self.num_to_update.append(0)
+                self.update_module_num.append(0)
 
         if self.list_ui:
             self.list_ui.set_device_num(len(self.stm32_updaters))
@@ -624,13 +695,17 @@ class STM32FirmwareMultiUpdater():
                 if self.state[index] == -1:
                     # wait module list
                     is_done = False
-                    if stm32_updater.modules_find:
-                        self.num_to_update[index] = len(stm32_updater.modules_to_update)
-                        self.state[index] = 0
-                    if stm32_updater.update_error == -1:
-                        self.state[index] = 1
                     if self.list_ui:
                         self.list_ui.error_message_signal.emit(index, "wait for module list")
+                    if stm32_updater.update_in_progress:
+                        self.state[index] = 0
+                    else:
+                        self.wait_timeout[index] += delay
+                        if self.wait_timeout[index] > 5:
+                            self.wait_timeout[index] = 0
+                            self.state[index] = 1
+                            stm32_updater.update_error = -1
+                            stm32_updater.update_error_message = "No modules"
                 if self.state[index] == 0:
                     # get module update list (only module update)
                     is_done = False
@@ -641,12 +716,13 @@ class STM32FirmwareMultiUpdater():
                         total_module_progress = 0
 
                         if stm32_updater.progress:
+                            self.update_module_num[index] = stm32_updater.update_module_num
                             current_module_progress = stm32_updater.progress
-                            if self.num_to_update[index]:
-                                total_num = self.num_to_update[index]
+                            if self.update_module_num[index]:
+                                total_num = self.update_module_num[index]
                             else:
                                 total_num = 1
-                            updated = len(stm32_updater.modules_updated) / total_num * 100
+                            updated = (len(stm32_updater.modules_updated) - 1) / total_num * 100
                             current = (current_module_progress) / total_num
                             total_module_progress = updated + current
                             total_progress += total_module_progress / len(self.stm32_updaters)
