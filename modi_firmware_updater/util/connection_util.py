@@ -61,8 +61,8 @@ class ConnTask(ABC):
 
 class SerTask(ConnTask):
     def __init__(self, verbose=False, port=None):
-        # if verbose:
-        print("Initiating serial connection...")
+        if verbose:
+            print("Initiating serial connection...")
         super().__init__(verbose)
         self.__port = port
         self.__json_buffer = b""

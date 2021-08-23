@@ -302,8 +302,8 @@ class STM32FirmwareUpdater:
                 if not crc_page_success:
                     page_begin -= page_size
                 time.sleep(0.01)
-        self.progress = 100
-        self.__print(f"\rUpdating {module_type} ({module_id}) {self.__progress_bar(1, 1)} 100%")
+        self.progress = 99
+        self.__print(f"\rUpdating {module_type} ({module_id}) {self.__progress_bar(99, 100)} 99%")
 
         # Get version info from version_path, using appropriate methods
         version_info, version_file = None, "version.txt"
@@ -334,6 +334,9 @@ class STM32FirmwareUpdater:
         self.__print(f"Firmware update is done for {module_type} ({module_id})")
         self.reset_state(update_in_progress=True)
 
+        self.progress = 100
+        self.__print(f"\rUpdating {module_type} ({module_id}) {self.__progress_bar(1, 1)} 100%")
+
         if self.modules_to_update:
             self.__print("Processing the next module to update the firmware..")
             next_module_id, next_module_type = self.modules_to_update.pop(0)
@@ -345,27 +348,26 @@ class STM32FirmwareUpdater:
             )
             self.__conn.send_nowait(reboot_message)
             self.__print("Reboot message has been sent to all connected modules")
-            self.reset_state()
 
             time.sleep(1)
-            self.update_in_progress = False
 
             self.__print("Module firmwares have been updated!")
             self.close()
+
+            self.update_in_progress = False
             self.update_error = 1
 
+            time.sleep(0.5)
+            self.reset_state()
+
             if self.ui:
-                self.ui.update_network_stm32.setStyleSheet(
-                    f"border-image: url({self.ui.active_path}); font-size: 16px"
-                )
+                self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
                 self.ui.update_network_stm32.setEnabled(True)
-                self.ui.update_network_esp32.setStyleSheet(
-                    f"border-image: url({self.ui.active_path}); font-size: 16px"
-                )
+                self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32_bootloader.setEnabled(True)
+                self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
                 self.ui.update_network_esp32.setEnabled(True)
-                self.ui.update_network_esp32_interpreter.setStyleSheet(
-                    f"border-image: url({self.ui.active_path}); font-size: 16px"
-                )
+                self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
                 self.ui.update_network_esp32_interpreter.setEnabled(True)
                 if self.ui.is_english:
                     self.ui.update_stm32_modules.setText("Update STM32 Modules.")
@@ -681,7 +683,7 @@ class STM32FirmwareMultiUpdater():
                 daemon=True
             ).start()
             if self.list_ui:
-                self.list_ui.error_message_signal.emit(index, "wait for network uuid")
+                self.list_ui.error_message_signal.emit(index, "Waiting for network uuid")
 
         delay = 0.1
         while True:
@@ -696,7 +698,7 @@ class STM32FirmwareMultiUpdater():
                     # wait module list
                     is_done = False
                     if self.list_ui:
-                        self.list_ui.error_message_signal.emit(index, "wait for module list")
+                        self.list_ui.error_message_signal.emit(index, "Waiting for module list")
                     if stm32_updater.update_in_progress:
                         self.state[index] = 0
                     else:
@@ -710,7 +712,7 @@ class STM32FirmwareMultiUpdater():
                     # get module update list (only module update)
                     is_done = False
                     if self.list_ui:
-                        self.list_ui.error_message_signal.emit(index, "update modules")
+                        self.list_ui.error_message_signal.emit(index, "Updating modules")
                     if stm32_updater.update_error == 0:
                         current_module_progress = 0
                         total_module_progress = 0
@@ -740,7 +742,7 @@ class STM32FirmwareMultiUpdater():
                         total_progress += 100 / len(self.stm32_updaters)
                         if self.list_ui:
                             self.list_ui.network_state_signal.emit(index, 0)
-                            self.list_ui.error_message_signal.emit(index, "update success")
+                            self.list_ui.error_message_signal.emit(index, "Update success")
                     else:
                         stm32_updater.close()
                         if self.list_ui:
@@ -774,17 +776,13 @@ class STM32FirmwareMultiUpdater():
         self.update_in_progress = False
 
         if self.ui:
-            self.ui.update_network_stm32.setStyleSheet(
-                f"border-image: url({self.ui.active_path}); font-size: 16px"
-            )
+            self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
             self.ui.update_network_stm32.setEnabled(True)
-            self.ui.update_network_esp32.setStyleSheet(
-                f"border-image: url({self.ui.active_path}); font-size: 16px"
-            )
+            self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
             self.ui.update_network_esp32.setEnabled(True)
-            self.ui.update_network_esp32_interpreter.setStyleSheet(
-                f"border-image: url({self.ui.active_path}); font-size: 16px"
-            )
+            self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+            self.ui.update_network_stm32_bootloader.setEnabled(True)
+            self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
             self.ui.update_network_esp32_interpreter.setEnabled(True)
             if self.ui.is_english:
                 self.ui.update_stm32_modules.setText("Update STM32 Modules.")

@@ -181,6 +181,7 @@ class Form(QDialog):
         self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.active_path}); font-size: 16px")
         self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.active_path}); font-size: 16px")
         self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.active_path}); font-size: 16px")
+        self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.active_path}); font-size: 16px")
         self.ui.translate_button.setStyleSheet(f"border-image: url({self.language_frame_path}); font-size: 13px")
         self.ui.devmode_button.setStyleSheet(f"border-image: url({self.language_frame_path}); font-size: 13px")
         self.ui.console.setStyleSheet("font-size: 10px")
@@ -203,6 +204,7 @@ class Form(QDialog):
         self.ui.update_network_esp32_interpreter.clicked.connect(self.update_network_esp32_interpreter)
         self.ui.update_stm32_modules.clicked.connect(self.update_stm32_modules)
         self.ui.update_network_stm32.clicked.connect(self.update_network_stm32)
+        self.ui.update_network_stm32_bootloader.clicked.connect(self.update_network_bootloader_stm32)
         self.ui.translate_button.clicked.connect(self.translate_button_text)
         self.ui.devmode_button.clicked.connect(self.dev_mode_button)
 
@@ -211,6 +213,7 @@ class Form(QDialog):
             self.ui.update_network_esp32_interpreter,
             self.ui.update_stm32_modules,
             self.ui.update_network_stm32,
+            self.ui.update_network_stm32_bootloader,
             self.ui.devmode_button,
             self.ui.translate_button,
         ]
@@ -280,7 +283,6 @@ class Form(QDialog):
         th.Thread(
             target=self.__click_motion, args=(0, button_start), daemon=True
         ).start()
-
 
         modi_ports = list_modi_ports()
         if not modi_ports:
@@ -373,19 +375,43 @@ class Form(QDialog):
         network_updater.set_ui(self.ui, self.stm32_update_list_form)
         th.Thread(
             target=network_updater.update_module_firmware,
-            args=(modi_ports, ),
+            args=(modi_ports, False),
+            daemon=True,
+        ).start()
+        self.firmware_updater = network_updater
+
+    def update_network_bootloader_stm32(self):
+        button_start = time.time()
+        if self.firmware_updater and self.firmware_updater.update_in_progress:
+            self.stm32_update_list_form.ui.show()
+            return
+        self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.pressed_path}); font-size: 16px")
+        self.ui.console.clear()
+        print("STM32 Firmware Updater has been initialized for base update!")
+        th.Thread(
+            target=self.__click_motion, args=(4, button_start), daemon=True
+        ).start()
+
+        modi_ports = list_modi_ports()
+        if not modi_ports:
+            raise Exception("No MODI port is connected")
+
+        self.stm32_update_list_form.reset_device_list()
+        self.stm32_update_list_form.ui.show()
+        network_updater = NetworkFirmwareMultiUpdater()
+        network_updater.set_ui(self.ui, self.stm32_update_list_form)
+        th.Thread(
+            target=network_updater.update_module_firmware,
+            args=(modi_ports, True),
             daemon=True,
         ).start()
         self.firmware_updater = network_updater
 
     def dev_mode_button(self):
         button_start = time.time()
-        self.ui.devmode_button.setStyleSheet(
-            f"border-image: url({self.language_frame_pressed_path});"
-            "font-size: 13px"
-        )
+        self.ui.devmode_button.setStyleSheet(f"border-image: url({self.language_frame_pressed_path});font-size: 13px")
         th.Thread(
-            target=self.__click_motion, args=(4, button_start), daemon=True
+            target=self.__click_motion, args=(5, button_start), daemon=True
         ).start()
         if self.console:
             self.ui.console.hide()
@@ -399,13 +425,14 @@ class Form(QDialog):
         button_start = time.time()
         self.ui.translate_button.setStyleSheet(f"border-image: url({self.language_frame_pressed_path}); font-size: 13px")
         th.Thread(
-            target=self.__click_motion, args=(5, button_start), daemon=True
+            target=self.__click_motion, args=(6, button_start), daemon=True
         ).start()
         button_en = [
             "Update Network ESP32",
             "Update Network ESP32 Interpreter",
             "Update STM32 Modules",
             "Update Network STM32",
+            "Set Network Bootloader STM32",
             "Dev Mode",
             "한국어",
         ]
@@ -414,6 +441,7 @@ class Form(QDialog):
             "네트워크 모듈 인터프리터 초기화",
             "모듈 초기화",
             "네트워크 모듈 초기화",
+            "네트워크 모듈 부트로더",
             "개발자 모드",
             "English",
         ]
@@ -664,12 +692,12 @@ class Form(QDialog):
         while time.time() - start_time < 0.2:
             pass
 
-        if button_type in [4, 5]:
+        if button_type in [5, 6]:
             self.buttons[button_type].setStyleSheet(f"border-image: url({self.language_frame_path}); font-size: 13px")
         else:
             self.buttons[button_type].setStyleSheet(f"border-image: url({self.active_path}); font-size: 16px")
             for i, q_button in enumerate(self.buttons):
-                if i in [button_type, 4, 5]:
+                if i in [button_type, 5, 6]:
                     continue
                 q_button.setStyleSheet(f"border-image: url({self.inactive_path}); font-size: 16px")
                 q_button.setEnabled(False)

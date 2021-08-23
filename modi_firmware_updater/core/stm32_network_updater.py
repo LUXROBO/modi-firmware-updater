@@ -43,8 +43,11 @@ class NetworkFirmwareUpdater(serial.Serial):
     SOFT_RECONNECT = 1
     HARD_RECONNECT = 2
 
+    REQUEST_RECONNECT_NONE = 0
     REQUEST_DISCONNECT = 1
     REQUEST_RECONNECT = 2
+    REQUEST_SOFT_DISCONNECT = 3
+    REQUEST_SOFT_RECONNECT = 4
 
     def __init__(self, device=None):
         self.print = True
@@ -68,6 +71,7 @@ class NetworkFirmwareUpdater(serial.Serial):
                     break
             self.__print(f"Connecting to MODI network module at {modi_port.device}")
         
+        self.bootloader = False
         self.network_version = None
         self.network_uuid = None
         self.network_id = None
@@ -77,8 +81,11 @@ class NetworkFirmwareUpdater(serial.Serial):
 
         self.progress = 0
 
+        self.need_to_reconnect = False
+        self.reconnect_start_signal = False
+        self.reconnect_end_signal = False
         self.popup_reconnect = False
-        self.popup_reconnect_mode = self.REQUEST_DISCONNECT
+        self.popup_reconnect_mode = self.REQUEST_RECONNECT_NONE
         self.raise_error_message = True
         self.update_error = 0
         self.update_error_message = ""
@@ -275,23 +282,55 @@ class NetworkFirmwareUpdater(serial.Serial):
         self.__print(f"End flash is written for network ({module_id})")
         return True
 
-    def reconnect_network_module(self, mode):
+    def reconnect_network_module(self, mode, retry_timeout = 5):
         if mode == self.SOFT_RECONNECT:
             self.__print("Temporally disconnecting the serial connection...")
+            self.popup_reconnect_mode = self.REQUEST_SOFT_DISCONNECT
             self.flushInput()
             self.flushOutput()
+            self.reset_input_buffer()
+            self.reset_output_buffer()
             self.close()
-            time.sleep(10)
-            self.__print("Re-init serial connection for the update, in 10 seconds...")
-            for port in stl.comports():
-                if self.location == port.location:
-                    self.name = port.name
+
+            close_time = 5
+            time.sleep(close_time)
+
+            self.__print(f"Re-init serial connection for the update, in {int(close_time)} seconds...")
+            self.popup_reconnect_mode = self.REQUEST_SOFT_RECONNECT
+
+            is_success = False
+            init_time = time.time()
+            while True:
+                try:
+                    for port in stl.comports():
+                        if self.location == port.location:
+                            self.__print("find port: " + port.name)
+                            self.name = port.name
+                            break
+                    super().__init__(self.name, timeout = 0.1, baudrate = 921600)
+                    self.reset_input_buffer()
+                    self.reset_output_buffer()
+                except serial.SerialException as se:
+                    self.__print("error: " + str(se))
+                except:
+                    self.__print("error")
+                else:
+                    is_success = True
                     break
-            self.open()
-            time.sleep(5)
+                
+                if time.time() - init_time > retry_timeout:
+                    break
+                time.sleep(0.5)
+
+            self.popup_reconnect_mode = self.REQUEST_RECONNECT_NONE
+            time.sleep(2)
+            if not is_success:
+                raise Exception("Reconnect error")
         elif mode == self.HARD_RECONNECT:
             self.flushInput()
             self.flushOutput()
+            self.reset_input_buffer()
+            self.reset_output_buffer()
             self.close()
             time.sleep(1)
 
@@ -329,110 +368,108 @@ class NetworkFirmwareUpdater(serial.Serial):
             time.sleep(1)
 
             self.popup_reconnect = False
+            self.popup_reconnect_mode = self.REQUEST_RECONNECT_NONE
 
             # reconnect
             self.__print("try reconnect")
-            self.open()
+            super().__init__(self.name, timeout = 0.1, baudrate = 921600)
+            self.reset_input_buffer()
+            self.reset_output_buffer()
+            time.sleep(1)
 
-    def update_module_firmware(self):
+    def update_module_firmware(self, bootloader):
         self.__print("update_module_firmware")
+        self.bootloader = bootloader
         self.update_in_progress = True
         self.progress = 0
-        self.__print("get network info")
-        self.network_uuid, self.network_version = self.get_network_info()
 
-        reconnect_mode = self.NO_RECONNECT
-        if self.network_uuid:
-            self.network_id = self.network_uuid & 0xFFF
-            if self.network_version:
-                self.__print(f'0x{self.network_uuid:X}', self.network_version)
-                if self.__compare_version(self.network_version, "1.2.1") != -1:
-                    # hard reset 
-                    reconnect_mode = self.HARD_RECONNECT
-                else:
-                    # soft reset
-                    reconnect_mode = self.SOFT_RECONNECT
+        if self.bootloader:
+            self.__print("get network info")
+            self.network_uuid, self.network_version = self.get_network_info()
+
+            if self.network_uuid:
+                self.network_id = self.network_uuid & 0xFFF
             else:
-                self.__print(f'0x{self.network_uuid:X}', "warning")
-                # update
-                reconnect_mode = self.NO_RECONNECT
-        else:
-            self.__print("no response")
-            self.network_id = 0xFFF
-            # hard reset
-            reconnect_mode = self.HARD_RECONNECT
+                self.network_id = 0xFFF
 
-        self.__print("Firmware update has been requested")
-        if reconnect_mode != self.NO_RECONNECT:
+            self.__print("update network module")
+            self.progress = 50
             self.send_set_network_module_state(self.network_id, Module.UPDATE_FIRMWARE, Module.PNP_OFF)
-            time.sleep(1)
-            try:
-                self.reconnect_network_module(reconnect_mode)
-                self.__print("reconnect success")
-            except serial.SerialException as se:
-                self.__print("reconnect error " + str(se))
-                self.update_in_progress = False
-                self.update_error = -1
-                self.update_error_message = "Reconnect error " + str(se)
-                return
-            except:
-                self.__print("reconnect error")
-                self.update_in_progress = False
-                self.update_error = -1
-                self.update_error_message = "Reconnect error"
-                return
+            time.sleep(5)
+            self.progress = 100
 
-        time.sleep(1)
-
-        # wait warning flag
-        self.__print("wait warning state")
-        timeout = 5
-        init_time = time.time()
-        is_timeout = False
-        while True:
-            recved = self.wait_for_json(timeout)
-            if time.time() - init_time > timeout or not recved:
-                is_timeout = True
-                break
-
-            try:
-                json_msg = json.loads(recved)
-                if json_msg["c"] == 0x0A:
-                    unpacked_data = unpack_data(json_msg["b"], (6, 1))
-                    module_uuid = unpacked_data[0]
-                    warning_type = unpacked_data[1]
-                    module_type = get_module_type_from_uuid(module_uuid)
-                    if module_type == "network":
-                        if not self.network_uuid:
-                            self.network_uuid = module_uuid
-                            self.network_id = self.network_uuid & 0xFFF
-
-                        if warning_type == 1:
-                            self.send_set_module_state(self.network_id, Module.UPDATE_FIRMWARE_READY, Module.PNP_OFF)
-                        if  warning_type == 2:
-                            break
-            except json.decoder.JSONDecodeError as jde:
-                self.__print("json parse error: " + str(jde))
-
-            time.sleep(0.01)
-
-        if is_timeout:
+            if self.is_open:
+                self.flushInput()
+                self.flushOutput()
+                self.close()
+            time.sleep(5)
+            self.update_error = 1
             self.update_in_progress = False
-            self.update_error = -1
-            self.update_error_message = "Warning timeout"
-            return
+        else:
+            # wait warning flag
+            self.__print("wait warning state")
+            timeout = 10
+            init_time = time.time()
+            is_timeout = False
+            retry = 0
+            max_retry = 5
+            while True:
+                recved = self.wait_for_json(timeout)
+                if not recved:
+                    retry += 1
+                    if retry > max_retry:
+                        is_timeout = True
+                        break
+                    continue
 
-        # update network module
-        self.__print("update network module")
-        update_success = self.update_network_module(self.network_id)
-        if not update_success:
-            self.__print("update error - " + self.update_error_message)
-        self.update_in_progress = False
+                if time.time() - init_time > timeout or not recved:
+                    is_timeout = True
+                    break
 
-        if self.is_open:
-            self.flushInput()
-            self.flushOutput()
-            self.close()
+                try:
+                    json_msg = json.loads(recved)
+                    if json_msg["c"] == 0x0A:
+                        unpacked_data = unpack_data(json_msg["b"], (6, 1))
+                        module_uuid = unpacked_data[0]
+                        warning_type = unpacked_data[1]
+                        module_type = get_module_type_from_uuid(module_uuid)
+                        if module_type == "network":
+                            if not self.network_uuid:
+                                self.network_uuid = module_uuid
+                                self.network_id = self.network_uuid & 0xFFF
+
+                            if warning_type == 1:
+                                self.send_set_module_state(self.network_id, Module.UPDATE_FIRMWARE_READY, Module.PNP_OFF)
+                            if  warning_type == 2:
+                                break
+                except json.decoder.JSONDecodeError as jde:
+                    self.__print("json parse error: " + str(jde))
+
+                time.sleep(0.01)
+
+            if is_timeout:
+                self.update_in_progress = False
+                self.update_error = -1
+                self.update_error_message = "Warning timeout"
+                if self.is_open:
+                    self.flushInput()
+                    self.flushOutput()
+                    self.close()
+                return
+
+            # update network module
+            self.__print("update network module")
+            update_success = self.update_network_module(self.network_id)
+            if not update_success:
+                self.__print("update error - " + self.update_error_message)
+
+            if self.is_open:
+                self.flushInput()
+                self.flushOutput()
+                self.close()
+
+            self.update_in_progress = False
+            self.update_error = 1
 
     def update_network_module(self, module_id):
         root_path = path.join(path.dirname(__file__), "..", "assets", "firmware", "latest","stm32")
@@ -456,10 +493,16 @@ class NetworkFirmwareUpdater(serial.Serial):
             self.progress = progress
 
             if self.ui:
-                if self.ui.is_english:
-                    self.ui.update_network_stm32.setText(f"Network STM32 update is in progress. ({progress}%)")
+                if self.bootloader:
+                    if self.ui.is_english:
+                        self.ui.update_network_stm32_bootloader.setText(f"Network bootloader is in progress. ({progress}%)")
+                    else:
+                        self.ui.update_network_stm32_bootloader.setText(f"네트워크 모듈 부트로터 진행중입니다. ({progress}%)")
                 else:
-                    self.ui.update_network_stm32.setText(f"네트워크 모듈 초기화가 진행중입니다. ({progress}%)")
+                    if self.ui.is_english:
+                        self.ui.update_network_stm32.setText(f"Network STM32 update is in progress. ({progress}%)")
+                    else:
+                        self.ui.update_network_stm32.setText(f"네트워크 모듈 초기화가 진행중입니다. ({progress}%)")
 
             self.__print(f"\rUpdating network ({module_id}) {self.__progress_bar(page_begin, bin_end)} {progress}%", end="")
 
@@ -556,25 +599,27 @@ class NetworkFirmwareUpdater(serial.Serial):
             self.flushOutput()
             self.close()
 
-        self.update_error = 1
-
         if self.ui:
-            self.ui.update_stm32_modules.setStyleSheet(
-                f"border-image: url({self.ui.active_path}); font-size: 16px"
-            )
+            self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
             self.ui.update_stm32_modules.setEnabled(True)
-            self.ui.update_network_esp32.setStyleSheet(
-                f"border-image: url({self.ui.active_path}); font-size: 16px"
-            )
+            self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
             self.ui.update_network_esp32.setEnabled(True)
-            self.ui.update_network_esp32_interpreter.setStyleSheet(
-                f"border-image: url({self.ui.active_path}); font-size: 16px"
-            )
+            self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
             self.ui.update_network_esp32_interpreter.setEnabled(True)
-            if self.ui.is_english:
-                self.ui.update_network_stm32.setText("Update Network STM32")
+            if self.bootloader:
+                self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32.setEnabled(True)
+                if self.ui.is_english:
+                    self.ui.update_network_stm32_bootloader.setText("Set Network Bootloader STM32")
+                else:
+                    self.ui.update_network_stm32_bootloader.setText("네트워크 모듈 부트로더")
             else:
-                self.ui.update_network_stm32.setText("네트워크 모듈 초기화")
+                self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32_bootloader.setEnabled(True)
+                if self.ui.is_english:
+                    self.ui.update_network_stm32.setText("Update Network STM32")
+                else:
+                    self.ui.update_network_stm32.setText("네트워크 모듈 초기화")
 
         return True
 
@@ -644,6 +689,7 @@ class NetworkFirmwareUpdater(serial.Serial):
 
     def __print(self, data, end="\n"):
         if self.print:
+            print(self.name, end = " - ")
             print(data, end)
 
 class NetworkFirmwareMultiUpdater():
@@ -656,7 +702,7 @@ class NetworkFirmwareMultiUpdater():
         self.ui = ui
         self.list_ui = list_ui
 
-    def update_module_firmware(self, modi_ports):
+    def update_module_firmware(self, modi_ports, bootloader):
         self.network_updaters = []
         self.network_uuid = []
         self.state = []
@@ -688,25 +734,46 @@ class NetworkFirmwareMultiUpdater():
         for index, network_updater in enumerate(self.network_updaters):
             th.Thread(
                 target=network_updater.update_module_firmware,
+                args=(bootloader, ),
                 daemon=True
             ).start()
             if self.list_ui:
-                self.list_ui.error_message_signal.emit(index, "wait for network uuid")
+                self.list_ui.error_message_signal.emit(index, "Wait for network uuid")
 
         delay = 0.1
+        reconnect_device = []
         while True:
             is_done = True
             total_progress = 0
             for index, network_updater in enumerate(self.network_updaters):
-                if network_updater.update_in_progress:
-                    if network_updater.network_uuid:
-                        self.network_uuid[index] = f'0x{network_updater.network_uuid:X}'
-                        self.list_ui.network_uuid_signal.emit(index, self.network_uuid[index])
-                    if network_updater.popup_reconnect:
-                        if self.list_ui:
-                            self.list_ui.network_state_signal.emit(index, network_updater.popup_reconnect_mode)
-                    else:
+                if network_updater.network_uuid:
+                    self.network_uuid[index] = f'0x{network_updater.network_uuid:X}'
+                    self.list_ui.network_uuid_signal.emit(index, self.network_uuid[index])
+                if self.list_ui:
+                    if network_updater.popup_reconnect_mode == 1:
+                        self.list_ui.error_message_signal.emit(index, "Please disconnect")
+                        self.list_ui.network_state_signal.emit(index, network_updater.popup_reconnect_mode)
+                    elif network_updater.popup_reconnect_mode == 2:
+                        self.list_ui.error_message_signal.emit(index, "Please reconnect")
+                        self.list_ui.network_state_signal.emit(index, network_updater.popup_reconnect_mode)
+                    elif network_updater.popup_reconnect_mode == 3:
+                        self.list_ui.error_message_signal.emit(index, "Disconnecting.....")
                         self.list_ui.network_state_signal.emit(index, 0)
+                    elif network_updater.popup_reconnect_mode == 4:
+                        self.list_ui.error_message_signal.emit(index, "Reconnecting.....")
+                        self.list_ui.network_state_signal.emit(index, 0)
+
+                if network_updater.need_to_reconnect:
+                    if not index in reconnect_device:
+                        reconnect_device.append(index)
+                if len(reconnect_device):
+                    if index == reconnect_device[0]:
+                        network_updater.reconnect_start_signal = True
+                        if network_updater.reconnect_end_signal:
+                            reconnect_device.pop(0)
+                        else:
+                            if network_updater.update_error != 0:
+                                reconnect_device.pop(0)
 
                 if self.state[index] == 0:
                     # update modules
@@ -722,6 +789,9 @@ class NetworkFirmwareMultiUpdater():
                     else:
                         total_progress += 100 / len(self.network_updaters)
                         self.state[index] = 1
+                    if self.list_ui and network_updater.popup_reconnect_mode == 0:
+                        self.list_ui.error_message_signal.emit(index, "Updating module")
+                        self.list_ui.network_state_signal.emit(index, 0)
                 elif self.state[index] == 1:
                     # end
                     total_progress += 100 / len(self.network_updaters)
@@ -730,7 +800,7 @@ class NetworkFirmwareMultiUpdater():
                         print("update success: " + self.network_uuid[index])
                         if self.list_ui:
                             self.list_ui.network_state_signal.emit(index, 0)
-                            self.list_ui.error_message_signal.emit(index, "update success")
+                            self.list_ui.error_message_signal.emit(index, "Update success")
                     else:
                         # update error
                         print("update error: " + self.network_uuid[index] + " - " + network_updater.update_error_message)
@@ -749,10 +819,16 @@ class NetworkFirmwareMultiUpdater():
                 print(f"\r{self.__progress_bar(total_progress, 100)}", end="")
 
                 if self.ui:
-                    if self.ui.is_english:
-                        self.ui.update_network_stm32.setText(f"Network STM32 update is in progress. ({int(total_progress)}%)")
+                    if bootloader:
+                        if self.ui.is_english:
+                            self.ui.update_network_stm32_bootloader.setText(f"Network bootloader is in progress. ({int(total_progress)}%)")
+                        else:
+                            self.ui.update_network_stm32_bootloader.setText(f"네트워크 모듈 부트로터 진행중입니다. ({int(total_progress)}%)")
                     else:
-                        self.ui.update_network_stm32.setText(f"네트워크 모듈 초기화가 진행중입니다. ({int(total_progress)}%)")
+                        if self.ui.is_english:
+                            self.ui.update_network_stm32.setText(f"Network STM32 update is in progress. ({int(total_progress)}%)")
+                        else:
+                            self.ui.update_network_stm32.setText(f"네트워크 모듈 초기화가 진행중입니다. ({int(total_progress)}%)")
 
                 if self.list_ui:
                     self.list_ui.total_progress_signal.emit(total_progress)
@@ -766,22 +842,26 @@ class NetworkFirmwareMultiUpdater():
         self.update_in_progress = False
 
         if self.ui:
-            self.ui.update_stm32_modules.setStyleSheet(
-                f"border-image: url({self.ui.active_path}); font-size: 16px"
-            )
+            self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
             self.ui.update_stm32_modules.setEnabled(True)
-            self.ui.update_network_esp32.setStyleSheet(
-                f"border-image: url({self.ui.active_path}); font-size: 16px"
-            )
+            self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
             self.ui.update_network_esp32.setEnabled(True)
-            self.ui.update_network_esp32_interpreter.setStyleSheet(
-                f"border-image: url({self.ui.active_path}); font-size: 16px"
-            )
+            self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
             self.ui.update_network_esp32_interpreter.setEnabled(True)
-            if self.ui.is_english:
-                self.ui.update_network_stm32.setText("Update Network STM32")
+            if bootloader:
+                self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32.setEnabled(True)
+                if self.ui.is_english:
+                    self.ui.update_network_stm32_bootloader.setText("Set Network Bootloader STM32")
+                else:
+                    self.ui.update_network_stm32_bootloader.setText("네트워크 모듈 부트로더")
             else:
-                self.ui.update_network_stm32.setText("네트워크 모듈 초기화")
+                self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32_bootloader.setEnabled(True)
+                if self.ui.is_english:
+                    self.ui.update_network_stm32.setText("Update Network STM32")
+                else:
+                    self.ui.update_network_stm32.setText("네트워크 모듈 초기화")
 
         if self.list_ui:
             self.list_ui.ui.close_button.setEnabled(True)
