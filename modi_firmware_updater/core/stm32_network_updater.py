@@ -1,9 +1,7 @@
-import io
 import json
 import sys
 import threading as th
 import time
-from base64 import b64decode, b64encode
 from io import open
 from os import path
 from itertools import zip_longest
@@ -12,11 +10,8 @@ import serial
 import serial.tools.list_ports as stl
 
 from modi_firmware_updater.util.connection_util import list_modi_ports
-from modi_firmware_updater.util.message_util import (decode_message,
-                                                     parse_message,
-                                                     unpack_data)
-from modi_firmware_updater.util.module_util import (Module,
-                                                    get_module_type_from_uuid)
+from modi_firmware_updater.util.message_util import (parse_message, unpack_data)
+from modi_firmware_updater.util.module_util import (Module, get_module_type_from_uuid)
 
 
 def retry(exception_to_catch):
@@ -73,12 +68,11 @@ class NetworkFirmwareUpdater(serial.Serial):
                     break
             self.__print(f"Connecting to MODI network module at {modi_port.device}")
         
-        self.version = None
-        self.uuid = None
-        self.id = None
+        self.network_version = None
+        self.network_uuid = None
+        self.network_id = None
 
         self.update_in_progress = False
-        self.update_start = False
         self.ui = None
 
         self.progress = 0
@@ -145,7 +139,7 @@ class NetworkFirmwareUpdater(serial.Serial):
             self.write(send_pkt.encode("utf8"))
             self.reset_input_buffer()
 
-    def send_network_module_state(self, did, module_state, pnp_state):
+    def send_set_network_module_state(self, did, module_state, pnp_state):
         send_pkt = parse_message(0xA4, 0, did, (module_state, pnp_state))
         if self.is_open:
             self.write(send_pkt.encode("utf8"))
@@ -345,13 +339,13 @@ class NetworkFirmwareUpdater(serial.Serial):
         self.update_in_progress = True
         self.progress = 0
         self.__print("get network info")
-        self.uuid, self.network_version = self.get_network_info()
+        self.network_uuid, self.network_version = self.get_network_info()
 
         reconnect_mode = self.NO_RECONNECT
-        if self.uuid:
-            self.id = self.uuid & 0xFFF
+        if self.network_uuid:
+            self.network_id = self.network_uuid & 0xFFF
             if self.network_version:
-                self.__print(f'0x{self.uuid:X}', self.network_version)
+                self.__print(f'0x{self.network_uuid:X}', self.network_version)
                 if self.__compare_version(self.network_version, "1.2.1") != -1:
                     # hard reset 
                     reconnect_mode = self.HARD_RECONNECT
@@ -359,18 +353,18 @@ class NetworkFirmwareUpdater(serial.Serial):
                     # soft reset
                     reconnect_mode = self.SOFT_RECONNECT
             else:
-                self.__print(f'0x{self.uuid:X}', "warning")
+                self.__print(f'0x{self.network_uuid:X}', "warning")
                 # update
                 reconnect_mode = self.NO_RECONNECT
         else:
             self.__print("no response")
-            self.id = 0xFFF
+            self.network_id = 0xFFF
             # hard reset
             reconnect_mode = self.HARD_RECONNECT
 
         self.__print("Firmware update has been requested")
         if reconnect_mode != self.NO_RECONNECT:
-            self.send_network_module_state(self.id, Module.UPDATE_FIRMWARE, Module.PNP_OFF)
+            self.send_set_network_module_state(self.network_id, Module.UPDATE_FIRMWARE, Module.PNP_OFF)
             time.sleep(1)
             try:
                 self.reconnect_network_module(reconnect_mode)
@@ -379,7 +373,7 @@ class NetworkFirmwareUpdater(serial.Serial):
                 self.__print("reconnect error " + str(se))
                 self.update_in_progress = False
                 self.update_error = -1
-                self.update_error_message = "Reconnect error"
+                self.update_error_message = "Reconnect error " + str(se)
                 return
             except:
                 self.__print("reconnect error")
@@ -409,12 +403,12 @@ class NetworkFirmwareUpdater(serial.Serial):
                     warning_type = unpacked_data[1]
                     module_type = get_module_type_from_uuid(module_uuid)
                     if module_type == "network":
-                        if not self.uuid:
-                            self.uuid = module_uuid
-                            self.id = self.uuid & 0xFFF
+                        if not self.network_uuid:
+                            self.network_uuid = module_uuid
+                            self.network_id = self.network_uuid & 0xFFF
 
                         if warning_type == 1:
-                            self.send_set_module_state(self.id, Module.UPDATE_FIRMWARE_READY, Module.PNP_OFF)
+                            self.send_set_module_state(self.network_id, Module.UPDATE_FIRMWARE_READY, Module.PNP_OFF)
                         if  warning_type == 2:
                             break
             except json.decoder.JSONDecodeError as jde:
@@ -430,7 +424,7 @@ class NetworkFirmwareUpdater(serial.Serial):
 
         # update network module
         self.__print("update network module")
-        update_success = self.update_network_module(self.id)
+        update_success = self.update_network_module(self.network_id)
         if not update_success:
             self.__print("update error - " + self.update_error_message)
         self.update_in_progress = False
@@ -696,6 +690,8 @@ class NetworkFirmwareMultiUpdater():
                 target=network_updater.update_module_firmware,
                 daemon=True
             ).start()
+            if self.list_ui:
+                self.list_ui.error_message_signal.emit(index, "wait for network uuid")
 
         delay = 0.1
         while True:
@@ -703,14 +699,14 @@ class NetworkFirmwareMultiUpdater():
             total_progress = 0
             for index, network_updater in enumerate(self.network_updaters):
                 if network_updater.update_in_progress:
-                        if network_updater.uuid:
-                            self.network_uuid[index] = f'0x{network_updater.uuid:X}'
-                            self.list_ui.network_uuid_signal.emit(index, self.network_uuid[index])
-                        if network_updater.popup_reconnect:
-                            if self.list_ui:
-                                self.list_ui.network_state_signal.emit(index, network_updater.popup_reconnect_mode)
-                        else:
-                            self.list_ui.network_state_signal.emit(index, 0)
+                    if network_updater.network_uuid:
+                        self.network_uuid[index] = f'0x{network_updater.network_uuid:X}'
+                        self.list_ui.network_uuid_signal.emit(index, self.network_uuid[index])
+                    if network_updater.popup_reconnect:
+                        if self.list_ui:
+                            self.list_ui.network_state_signal.emit(index, network_updater.popup_reconnect_mode)
+                    else:
+                        self.list_ui.network_state_signal.emit(index, 0)
 
                 if self.state[index] == 0:
                     # update modules
@@ -734,17 +730,19 @@ class NetworkFirmwareMultiUpdater():
                         print("update success: " + self.network_uuid[index])
                         if self.list_ui:
                             self.list_ui.network_state_signal.emit(index, 0)
+                            self.list_ui.error_message_signal.emit(index, "update success")
                     else:
                         # update error
                         print("update error: " + self.network_uuid[index] + " - " + network_updater.update_error_message)
                         if self.list_ui:
                             self.list_ui.network_state_signal.emit(index, -1)
-                            self.list_ui.set_error_message(index, network_updater.update_error_message)
+                            self.list_ui.error_message_signal.emit(index, network_updater.update_error_message)
 
                     if self.list_ui:
                         self.list_ui.progress_signal.emit(index, 100, 100)
-
                     self.state[index] = 2
+                elif self.state[index] == 2:
+                    total_progress += 100 / len(self.network_updaters)
 
 
             if len(self.network_updaters):

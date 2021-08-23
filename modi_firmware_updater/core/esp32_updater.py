@@ -590,6 +590,8 @@ class ESP32FirmwareMultiUpdater():
                             self.list_ui.error_message_signal.emit(index, esp32_updater.update_error_message)
 
                     self.state[index] = 3
+                elif self.state[index] == 3:
+                    total_sequence += 100
 
             if total_sequence != 0:
                 if self.ui:
