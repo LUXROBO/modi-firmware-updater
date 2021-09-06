@@ -112,6 +112,7 @@ class STM32FirmwareUpdater:
             self.network_version = ".".join(module_version)
 
     def update_module_firmware(self):
+        self.request_network_id()
         self.reset_state()
         for target in self.__target_ids:
             self.request_to_update_firmware(target)
