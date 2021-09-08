@@ -19,7 +19,7 @@ def get_requirements():
 
 setup(
     name='modi-firmware-updater',
-    version='2.0.0',
+    version='2.1.0',
     author='LUXROBO',
     author_email='tech@luxrobo.com',
     description='A GUI Form of MODI Firmware Updater utilizing PyMODI as its backend.',
