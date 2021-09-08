@@ -71,7 +71,7 @@ class PopupMessageBox(QtWidgets.QMessageBox):
             self.setIcon(self.Icon.Information)
             self.setText("WARNING")
             self.addButton("Ok", self.ActionRole)
-            restart_btn.clicked.connect(self.restart_btn)
+            # restart_btn.clicked.connect(self.restart_btn)
 
         func = {
             "error": error_popup,
@@ -187,6 +187,7 @@ class Form(QDialog):
         self.ui.console.setStyleSheet("font-size: 10px")
 
         self.ui.setWindowTitle("MODI Firmware Updater")
+        self.ui.setWindowIcon(QtGui.QIcon(os.path.join(self.component_path, "network_module.ico")))
 
         # Redirect stdout to text browser (i.e. console in our UI)
         self.stdout = StdoutRedirect()
@@ -740,8 +741,9 @@ class ESP32UpdateListForm(QDialog):
     def __init__(self, ui_path, component_path):
         QDialog.__init__(self)
 
-        self.ui = uic.loadUi(ui_path)
         self.component_path = component_path
+        self.ui = uic.loadUi(ui_path)
+        self.ui.setWindowIcon(QtGui.QIcon(os.path.join(self.component_path, "network_module.ico")))
 
         self.ui_icon_list = [
             self.ui.image_1,
@@ -902,8 +904,9 @@ class STM32UpdateListForm(QDialog):
     def __init__(self, ui_path, component_path):
         QDialog.__init__(self)
 
-        self.ui = uic.loadUi(ui_path)
         self.component_path = component_path
+        self.ui = uic.loadUi(ui_path)
+        self.ui.setWindowIcon(QtGui.QIcon(os.path.join(self.component_path, "network_module.ico")))
 
         self.ui_icon_list = [
             self.ui.image_1,

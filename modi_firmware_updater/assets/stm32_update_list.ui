@@ -37,7 +37,7 @@
    <enum>Qt::StrongFocus</enum>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>Update list</string>
   </property>
   <property name="autoFillBackground">
    <bool>false</bool>
