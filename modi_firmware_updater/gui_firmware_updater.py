@@ -186,7 +186,7 @@ class Form(QDialog):
         self.ui.devmode_button.setStyleSheet(f"border-image: url({self.language_frame_path}); font-size: 13px")
         self.ui.console.setStyleSheet("font-size: 10px")
 
-        self.ui.setWindowTitle("MODI Firmware Updater(교원 AS용 v2.1.0)")
+        self.ui.setWindowTitle("MODI Firmware Updater(교원 AS용 v2.1.1)")
         self.ui.setWindowIcon(QtGui.QIcon(os.path.join(self.component_path, "network_module.ico")))
 
         # Redirect stdout to text browser (i.e. console in our UI)

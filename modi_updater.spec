@@ -41,7 +41,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='MODI Firmware Updater(교원 AS용 v2.1.0)',
+    name='MODI Firmware Updater(교원 AS용 v2.1.1)',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -53,7 +53,7 @@ exe = EXE(
 )
 app = BUNDLE(
     exe,
-    name='MODI Firmware Updater(교원 AS용 v2.1.0).app',
+    name='MODI Firmware Updater(교원 AS용 v2.1.1).app',
     icon='network_module.ico',
     bundle_identifier=None,
 )

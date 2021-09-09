@@ -318,11 +318,14 @@ class ESP32FirmwareUpdater(serial.Serial):
         json_pkt += self.read_until(b"}")
         return json_pkt
 
-    def __wait_for_json(self):
+    def __wait_for_json(self, timeout = 1):
         json_msg = self.__read_json()
+        init_time = time.time()
         while not json_msg:
             json_msg = self.__read_json()
             time.sleep(0.1)
+            if time.time() - init_time > timeout:
+                return ""
         return json_msg
 
     def __get_esp_version(self):
@@ -344,7 +347,7 @@ class ESP32FirmwareUpdater(serial.Serial):
         ver = b64decode(json_msg["b"]).lstrip(b"\x00")
         return ver.decode("ascii")
 
-    def __set_esp_version(self, version_text: str):
+    def __set_esp_version(self, version_text: str, retry = 5):
         self.__print(f"Writing version info (v{version_text})")
         version_byte = version_text.encode("ascii")
         version_byte = b"\x00" * (8 - len(version_byte)) + version_byte
@@ -355,13 +358,13 @@ class ESP32FirmwareUpdater(serial.Serial):
         )
         version_msg_enc = version_msg.encode("utf8")
 
-        while True:
+        for _ in range(0, retry):
             self.write(version_msg_enc)
             try:
                 json_msg = json.loads(self.__wait_for_json())
                 if json_msg["c"] == 0xA1:
                     break
-                self.__boot_to_app()
+                # self.__boot_to_app()
             except json.decoder.JSONDecodeError as jde:
                 self.__print("json parse error: " + str(jde))
 
