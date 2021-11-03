@@ -66,6 +66,7 @@ class STM32FirmwareUpdater:
         self.raise_error_message = True
         self.update_error = 0
         self.update_error_message = ""
+        self.update_index = 0
 
         self.open(port)
         for device in stl.comports():
@@ -93,7 +94,7 @@ class STM32FirmwareUpdater:
 
     def request_network_id(self):
         self.__conn.send_nowait(
-            parse_message(0x28, 0xFFF, 0xFFF, (0xFF, 0x0F))
+            parse_message(0x28, 0x0, 0xFFF, (0xFF, 0x0F))
         )
 
     def __assign_network_id(self, sid, data):
@@ -160,9 +161,13 @@ class STM32FirmwareUpdater:
             module_id, Module.UPDATE_FIRMWARE, Module.PNP_OFF
         )
         self.__conn.send_nowait(firmware_update_message)
+        time.sleep(0.01)
         self.__conn.send_nowait(firmware_update_message)
+        time.sleep(0.01)
         self.__conn.send_nowait(firmware_update_message)
+        time.sleep(0.01)
         self.__print("Firmware update has been requested")
+        print("Firmware update has been requested")
 
     def check_to_update_firmware(self, module_id: int) -> None:
         firmware_update_ready_message = self.__set_module_state(
@@ -196,8 +201,9 @@ class STM32FirmwareUpdater:
             return
 
         self.update_in_progress = True
+        self.update_index = 0
         updater_thread = th.Thread(
-            target=self.__update_firmware, args=(module_id, module_type)
+            target=self.__update_firmware, args=(module_id, module_type, 0)
         )
         updater_thread.daemon = True
         updater_thread.start()
@@ -207,10 +213,12 @@ class STM32FirmwareUpdater:
     ) -> None:
         if not is_error_response:
             self.response_flag = response
+            self.response_error_flag = False
         else:
+            self.response_flag = False
             self.response_error_flag = response
 
-    def __update_firmware(self, module_id: int, module_type: str) -> None:
+    def __update_firmware(self, module_id: int, module_type: str, module_index: int) -> None:
         self.update_in_progress = True
         self.module_type = module_type
         self.modules_updated.append((module_id, module_type))
@@ -240,7 +248,7 @@ class STM32FirmwareUpdater:
                 self.progress = progress
 
                 if self.ui:
-                    update_module_num = self.update_module_num
+                    update_module_num = len(self.modules_to_update)
                     num_updated = len(self.modules_updated)
                     if self.ui.is_english:
                         self.ui.update_stm32_modules.setText(
@@ -290,7 +298,7 @@ class STM32FirmwareUpdater:
                         bin_data=curr_data,
                         crc_val=checksum,
                     )
-                    self.__delay(0.002)
+                    self.__delay(0.001)
 
                 # CRC on current page (send CRC request / receive CRC response)
                 crc_page_success = self.send_firmware_command(
@@ -338,12 +346,14 @@ class STM32FirmwareUpdater:
         self.progress = 100
         self.__print(f"\rUpdating {module_type} ({module_id}) {self.__progress_bar(1, 1)} 100%")
 
-        if self.modules_to_update:
-            self.__print("Processing the next module to update the firmware..")
-            next_module_id, next_module_type = self.modules_to_update.pop(0)
-            self.__update_firmware(next_module_id, next_module_type)
+        module_index += 1
+        if module_index < len(self.modules_to_update):
+            next_module_id, next_module_type = self.modules_to_update[module_index]
+            self.__update_firmware(next_module_id, next_module_type, module_index)
         else:
             # Reboot all connected modules
+            self.modules_to_update.clear()
+            self.update_index = 0
             reboot_message = self.__set_module_state(
                 0xFFF, Module.REBOOT, Module.PNP_OFF
             )
@@ -377,10 +387,11 @@ class STM32FirmwareUpdater:
 
     @staticmethod
     def __delay(span):
-        init_time = time.perf_counter()
-        while time.perf_counter() - init_time < span:
-            pass
-        return
+        time.sleep(span)
+        # init_time = time.perf_counter()
+        # while time.perf_counter() - init_time < span:
+        #     pass
+        # return
 
     @staticmethod
     def __set_module_state(
@@ -488,6 +499,7 @@ class STM32FirmwareUpdater:
 
         return json.dumps(message, separators=(",", ":"))
 
+
     def calc_crc32(self, data: bytes, crc: int) -> int:
         crc ^= int.from_bytes(data, byteorder="little", signed=False)
 
@@ -514,7 +526,6 @@ class STM32FirmwareUpdater:
         page_addr: int = 0,
     ) -> bool:
         rot_scmd = 2 if oper_type == "erase" else 1
-
         # Send firmware command request
         request_message = self.get_firmware_command(
             module_id, 1, rot_scmd, crc_val, page_addr=dest_addr + page_addr
@@ -625,7 +636,6 @@ class STM32FirmwareUpdater:
         module_type = get_module_type_from_uuid(module_uuid)
         if module_type == "network":
             self.network_uuid = module_uuid
-
         if warning_type == 1:
             self.check_to_update_firmware(module_id)
         elif warning_type == 2:
@@ -633,6 +643,8 @@ class STM32FirmwareUpdater:
             if self.update_in_progress:
                 self.add_to_waitlist(module_id, module_type)
             else:
+                module_elem = module_id, module_type
+                self.modules_to_update.append(module_elem)
                 self.update_module(module_id, module_type)
 
     def __print(self, data, end="\n"):
@@ -719,15 +731,12 @@ class STM32FirmwareMultiUpdater():
                         total_module_progress = 0
 
                         if stm32_updater.progress:
-                            self.update_module_num[index] = stm32_updater.update_module_num
                             current_module_progress = stm32_updater.progress
-                            if self.update_module_num[index]:
-                                total_num = self.update_module_num[index]
+                            if len(stm32_updater.modules_to_update) == 0:
+                                total_module_progress = stm32_updater.progress
                             else:
-                                total_num = 1
-                            updated = (len(stm32_updater.modules_updated) - 1) / total_num * 100
-                            current = (current_module_progress) / total_num
-                            total_module_progress = updated + current
+                                total_module_progress = (stm32_updater.progress + (len(stm32_updater.modules_updated) - 1) * 100) / (len(stm32_updater.modules_to_update) * 100) * 100
+
                             total_progress += total_module_progress / len(self.stm32_updaters)
 
                         if self.list_ui:

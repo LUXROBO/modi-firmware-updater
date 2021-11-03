@@ -531,7 +531,7 @@ class NetworkFirmwareUpdater(serial.Serial):
 
                 curr_data = curr_page[curr_ptr : curr_ptr + 8]
                 checksum = self.set_firmware_data(module_id, curr_ptr // 8, curr_data, checksum)
-                self.__delay(0.002)
+                self.__delay(0.001)
 
             # CRC on current page (send CRC request / receive CRC response)
             crc_page_success = self.set_firmware_command(
@@ -647,10 +647,11 @@ class NetworkFirmwareUpdater(serial.Serial):
 
     @staticmethod
     def __delay(span):
-        init_time = time.perf_counter()
-        while time.perf_counter() - init_time < span:
-            pass
-        return
+        time.sleep(span)
+        # init_time = time.perf_counter()
+        # while time.perf_counter() - init_time < span:
+        #     pass
+        # return
 
     @staticmethod
     def __compare_version(
