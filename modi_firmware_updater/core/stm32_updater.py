@@ -242,7 +242,9 @@ class STM32FirmwareUpdater:
             bin_end = bin_size - ((bin_size - bin_begin) % page_size)
 
             page_offset = 0
-            for page_begin in range(bin_begin, bin_end + 1, page_size):
+            # for page_begin in range(bin_begin, bin_end + 1, page_size):
+            page_begin = bin_begin
+            while page_begin < bin_end :
                 # self.progress = 100 * page_begin // bin_end
                 progress = 100 * page_begin // bin_end
                 self.progress = progress
@@ -272,6 +274,7 @@ class STM32FirmwareUpdater:
 
                 # Skip current page if empty
                 if not sum(curr_page):
+                    page_begin = page_begin + page_size
                     continue
 
                 # Erase page (send erase request and receive its response)
@@ -283,7 +286,6 @@ class STM32FirmwareUpdater:
                     page_addr=page_begin + page_offset,
                 )
                 if not erase_page_success:
-                    page_begin -= page_size
                     continue
                 # Copy current page data to the module's memory
                 checksum = 0
@@ -309,7 +311,8 @@ class STM32FirmwareUpdater:
                     page_addr=page_begin + page_offset,
                 )
                 if not crc_page_success:
-                    page_begin -= page_size
+                    continue
+                page_begin = page_begin + page_size
                 time.sleep(0.01)
         self.progress = 99
         self.__print(f"\rUpdating {module_type} ({module_id}) {self.__progress_bar(99, 100)} 99%")
