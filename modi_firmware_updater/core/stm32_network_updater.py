@@ -488,7 +488,9 @@ class NetworkFirmwareUpdater(serial.Serial):
         bin_end = bin_size - ((bin_size - bin_begin) % page_size)
 
         page_offset = 0x8800
-        for page_begin in range(bin_begin, bin_end + 1, page_size):
+        page_begin = bin_begin
+        while page_begin < bin_end :
+        # for page_begin in range(bin_begin, bin_end + 1, page_size):
             progress = 100 * page_begin // bin_end
             self.progress = progress
 
@@ -511,6 +513,7 @@ class NetworkFirmwareUpdater(serial.Serial):
 
             # Skip current page if empty
             if not sum(curr_page):
+                page_begin = page_begin + page_size
                 continue
             
             erase_page_success = self.set_firmware_command(
@@ -541,15 +544,16 @@ class NetworkFirmwareUpdater(serial.Serial):
                 page_addr = flash_memory_addr + page_begin + page_offset
             )
             if not crc_page_success:
-                page_begin -= page_size
+                # page_begin -= page_size
                 page_retry_count += 1
                 if page_retry_count > page_retry_max_count:
                     self.update_error = -1
                     self.update_error_message = "CRC response error"
                     return False
+                page_begin = page_begin + page_size
             else:
                 page_retry_count = 0
-
+            page_begin = page_begin + page_size
             time.sleep(0.01)
 
         self.progress = 99
