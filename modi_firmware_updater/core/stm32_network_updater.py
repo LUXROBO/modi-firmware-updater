@@ -550,7 +550,7 @@ class NetworkFirmwareUpdater(serial.Serial):
                     self.update_error = -1
                     self.update_error_message = "CRC response error"
                     return False
-                page_begin = page_begin + page_size
+                continue
             else:
                 page_retry_count = 0
             page_begin = page_begin + page_size
