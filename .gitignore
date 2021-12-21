@@ -10,3 +10,4 @@ modi
 dist/
 build/
 .idea/
+modi_firmware_updater/assets/firmware/latest

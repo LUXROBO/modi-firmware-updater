@@ -61,7 +61,8 @@ class ConnTask(ABC):
 
 class SerTask(ConnTask):
     def __init__(self, verbose=False, port=None):
-        print("Initiating serial connection...")
+        if verbose:
+            print("Initiating serial connection...")
         super().__init__(verbose)
         self.__port = port
         self.__json_buffer = b""
@@ -96,7 +97,8 @@ class SerTask(ConnTask):
             self._bus = self.__init_serial(modi_port.device)
             try:
                 self._bus.open()
-                print(f'Serial is open at "{modi_port}"')
+                if self.verbose:
+                    print(f'Serial is open at "{modi_port}"')
                 return
             except SerialException:
                 continue
@@ -187,7 +189,7 @@ def list_modi_ports() -> List[ListPortInfo]:
             or (port.vid == 0x483 and port.pid == 0x5740)
         )
     modi_ports = [port for port in stl.comports() if __is_modi_port(port)]
-    print(f'{len(modi_ports)} number of network module(s) exist(s)')
+    # print(f'{len(modi_ports)} number of network module(s) exist(s)')
     return modi_ports
 
 
