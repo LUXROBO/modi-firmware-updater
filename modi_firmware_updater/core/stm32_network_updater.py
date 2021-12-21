@@ -455,6 +455,28 @@ class NetworkFirmwareUpdater(serial.Serial):
                     self.flushInput()
                     self.flushOutput()
                     self.close()
+                if self.ui:
+                    self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                    self.ui.update_stm32_modules.setEnabled(True)
+                    self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                    self.ui.update_network_esp32.setEnabled(True)
+                    self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                    self.ui.update_network_esp32_interpreter.setEnabled(True)
+                    if self.bootloader:
+                        self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                        self.ui.update_network_stm32.setEnabled(True)
+                        if self.ui.is_english:
+                            self.ui.update_network_stm32_bootloader.setText("Set Network Bootloader STM32")
+                        else:
+                            self.ui.update_network_stm32_bootloader.setText("네트워크 모듈 부트로더")
+                    else:
+                        self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                        self.ui.update_network_stm32_bootloader.setEnabled(True)
+                        if self.ui.is_english:
+                            self.ui.update_network_stm32.setText("Update Network STM32")
+                        else:
+                            self.ui.update_network_stm32.setText("네트워크 모듈 초기화")
+
                 return
 
             # update network module
@@ -470,6 +492,30 @@ class NetworkFirmwareUpdater(serial.Serial):
 
             self.update_in_progress = False
             self.update_error = 1
+            
+
+        if self.ui:
+            self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+            self.ui.update_stm32_modules.setEnabled(True)
+            self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+            self.ui.update_network_esp32.setEnabled(True)
+            self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+            self.ui.update_network_esp32_interpreter.setEnabled(True)
+            if self.bootloader:
+                self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32.setEnabled(True)
+                if self.ui.is_english:
+                    self.ui.update_network_stm32_bootloader.setText("Set Network Bootloader STM32")
+                else:
+                    self.ui.update_network_stm32_bootloader.setText("네트워크 모듈 부트로더")
+            else:
+                self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32_bootloader.setEnabled(True)
+                if self.ui.is_english:
+                    self.ui.update_network_stm32.setText("Update Network STM32")
+                else:
+                    self.ui.update_network_stm32.setText("네트워크 모듈 초기화")
+
 
     def update_network_module(self, module_id):
         root_path = path.join(path.dirname(__file__), "..", "assets", "firmware", "latest","stm32")
@@ -651,11 +697,11 @@ class NetworkFirmwareUpdater(serial.Serial):
 
     @staticmethod
     def __delay(span):
-        time.sleep(span)
-        # init_time = time.perf_counter()
-        # while time.perf_counter() - init_time < span:
-        #     pass
-        # return
+        # time.sleep(span)
+        init_time = time.perf_counter()
+        while time.perf_counter() - init_time < span:
+            pass
+        return
 
     @staticmethod
     def __compare_version(

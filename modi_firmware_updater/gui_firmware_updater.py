@@ -18,9 +18,9 @@ from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QDialog
 
 from modi_firmware_updater.util.connection_util import list_modi_ports
-from modi_firmware_updater.core.esp32_updater import ESP32FirmwareMultiUpdater
-from modi_firmware_updater.core.stm32_updater import STM32FirmwareMultiUpdater
-from modi_firmware_updater.core.stm32_network_updater import NetworkFirmwareMultiUpdater
+from modi_firmware_updater.core.esp32_updater import ESP32FirmwareUpdater
+from modi_firmware_updater.core.stm32_updater import STM32FirmwareUpdater
+from modi_firmware_updater.core.stm32_network_updater import NetworkFirmwareUpdater
 
 
 class StdoutRedirect(QObject):
@@ -289,13 +289,11 @@ class Form(QDialog):
         if not modi_ports:
             raise Exception("No MODI port is connected")
 
-        self.esp32_update_list_form.reset_device_list()
-        self.esp32_update_list_form.ui.show()
-        esp32_updater = ESP32FirmwareMultiUpdater()
-        esp32_updater.set_ui(self.ui, self.esp32_update_list_form)
+        esp32_updater = ESP32FirmwareUpdater()
+        esp32_updater.set_ui(self.ui)
         th.Thread(
             target=esp32_updater.update_firmware,
-            args=(modi_ports, ),
+            args=(False,),
             daemon=True
         ).start()
         self.firmware_updater = esp32_updater
@@ -316,10 +314,10 @@ class Form(QDialog):
         if not modi_ports:
             raise Exception("No MODI port is connected")
 
-        self.esp32_update_list_form.reset_device_list()
-        self.esp32_update_list_form.ui.show()
-        esp32_updater = ESP32FirmwareMultiUpdater()
-        esp32_updater.set_ui(self.ui, self.esp32_update_list_form)
+        # self.esp32_update_list_form.reset_device_list()
+        # self.esp32_update_list_form.ui.show()
+        esp32_updater = ESP32FirmwareUpdater()
+        esp32_updater.set_ui(self.ui)
         th.Thread(
             target=esp32_updater.update_firmware,
             args=(modi_ports, True,),
@@ -343,21 +341,23 @@ class Form(QDialog):
         if not modi_ports:
             raise Exception("No MODI port is connected")
 
-        self.stm32_update_list_form.reset_device_list()
-        self.stm32_update_list_form.ui.show()
-        stm32_updater = STM32FirmwareMultiUpdater()
-        stm32_updater.set_ui(self.ui, self.stm32_update_list_form)
+        # self.stm32_update_list_form.reset_device_list()
+        # self.stm32_update_list_form.ui.show()
+        stm32_updater = STM32FirmwareUpdater(port = modi_ports[0].device)
+        stm32_updater.set_print(False)
+        stm32_updater.set_raise_error(False)
+        stm32_updater.set_ui(self.ui)
         th.Thread(
             target=stm32_updater.update_module_firmware,
-            args=(modi_ports, ),
-            daemon=True
+            # args=(modi_ports, ),
+            daemon=True,
         ).start()
         self.firmware_updater = stm32_updater
 
     def update_network_stm32(self):
         button_start = time.time()
         if self.firmware_updater and self.firmware_updater.update_in_progress:
-            self.stm32_update_list_form.ui.show()
+            # self.stm32_update_list_form.ui.show()
             return
         self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.pressed_path}); font-size: 16px")
         self.ui.console.clear()
@@ -370,13 +370,13 @@ class Form(QDialog):
         if not modi_ports:
             raise Exception("No MODI port is connected")
 
-        self.stm32_update_list_form.reset_device_list()
-        self.stm32_update_list_form.ui.show()
-        network_updater = NetworkFirmwareMultiUpdater()
-        network_updater.set_ui(self.ui, self.stm32_update_list_form)
+        # self.stm32_update_list_form.reset_device_list()
+        # self.stm32_update_list_form.ui.show()
+        network_updater = NetworkFirmwareUpdater(modi_ports[0].device)
+        network_updater.set_ui(self.ui)
         th.Thread(
             target=network_updater.update_module_firmware,
-            args=(modi_ports, False),
+            args=(False,),
             daemon=True,
         ).start()
         self.firmware_updater = network_updater
@@ -384,7 +384,7 @@ class Form(QDialog):
     def update_network_bootloader_stm32(self):
         button_start = time.time()
         if self.firmware_updater and self.firmware_updater.update_in_progress:
-            self.stm32_update_list_form.ui.show()
+            # self.stm32_update_list_form.ui.show()
             return
         self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.pressed_path}); font-size: 16px")
         self.ui.console.clear()
@@ -397,13 +397,13 @@ class Form(QDialog):
         if not modi_ports:
             raise Exception("No MODI port is connected")
 
-        self.stm32_update_list_form.reset_device_list()
-        self.stm32_update_list_form.ui.show()
-        network_updater = NetworkFirmwareMultiUpdater()
-        network_updater.set_ui(self.ui, self.stm32_update_list_form)
+        # self.stm32_update_list_form.reset_device_list()
+        # self.stm32_update_list_form.ui.show()
+        network_updater = NetworkFirmwareUpdater()
+        network_updater.set_ui(self.ui)
         th.Thread(
             target=network_updater.update_module_firmware,
-            args=(modi_ports, True),
+            args=(True,),
             daemon=True,
         ).start()
         self.firmware_updater = network_updater

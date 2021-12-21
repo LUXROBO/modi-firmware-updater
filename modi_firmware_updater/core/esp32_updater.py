@@ -128,6 +128,8 @@ class ESP32FirmwareUpdater(serial.Serial):
                 self.ui.update_network_stm32.setEnabled(True)
                 self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
                 self.ui.update_network_esp32.setEnabled(True)
+                self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32_bootloader.setEnabled(True)
                 if self.ui.is_english:
                     self.ui.update_network_esp32_interpreter.setText("Update Network ESP32 Interpreter")
                 else:
@@ -188,6 +190,8 @@ class ESP32FirmwareUpdater(serial.Serial):
                 self.ui.update_network_stm32.setEnabled(True)
                 self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
                 self.ui.update_network_esp32_interpreter.setEnabled(True)
+                self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32_bootloader.setEnabled(True)
                 if self.ui.is_english:
                     self.ui.update_network_esp32.setText("Update Network ESP32")
                 else:

@@ -266,7 +266,6 @@ class STM32FirmwareUpdater:
                             f"{update_module_num})"
                             f"({progress}%)"
                         )
-
                 self.__print(f"\rUpdating {module_type} ({module_id}) {self.__progress_bar(page_begin, bin_end)} {progress}%", end="")
 
                 page_end = page_begin + page_size
@@ -301,7 +300,6 @@ class STM32FirmwareUpdater:
                         crc_val=checksum,
                     )
                     self.__delay(0.001)
-
                 # CRC on current page (send CRC request / receive CRC response)
                 crc_page_success = self.send_firmware_command(
                     oper_type="crc",
@@ -390,11 +388,11 @@ class STM32FirmwareUpdater:
 
     @staticmethod
     def __delay(span):
-        time.sleep(span)
-        # init_time = time.perf_counter()
-        # while time.perf_counter() - init_time < span:
-        #     pass
-        # return
+        # time.sleep(span)
+        init_time = time.perf_counter()
+        while time.perf_counter() - init_time < span:
+            pass
+        return
 
     @staticmethod
     def __set_module_state(
@@ -610,7 +608,6 @@ class STM32FirmwareUpdater:
             0x0A: self.__update_warning,
             0x0C: self.__update_firmware_state,
         }.get(ins)
-
         if command:
             command(sid, data)
 
