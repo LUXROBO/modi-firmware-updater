@@ -276,7 +276,7 @@ class Form(QDialog):
     def update_network_esp32(self):
         button_start = time.time()
         if self.firmware_updater and self.firmware_updater.update_in_progress:
-            self.esp32_update_list_form.ui.show()
+            # self.esp32_update_list_form.ui.show()
             return
         self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.pressed_path}); font-size: 16px")
         self.ui.console.clear()
@@ -301,7 +301,7 @@ class Form(QDialog):
     def update_network_esp32_interpreter(self):
         button_start = time.time()
         if self.firmware_updater and self.firmware_updater.update_in_progress:
-            self.esp32_update_list_form.ui.show()
+            # self.esp32_update_list_form.ui.show()
             return
         self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.pressed_path}); font-size: 16px")
         self.ui.console.clear()
@@ -328,7 +328,7 @@ class Form(QDialog):
     def update_stm32_modules(self):
         button_start = time.time()
         if self.firmware_updater and self.firmware_updater.update_in_progress:
-            self.stm32_update_list_form.ui.show()
+            # self.stm32_update_list_form.ui.show()
             return
         self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.pressed_path}); font-size: 16px")
         self.ui.console.clear()
@@ -344,7 +344,7 @@ class Form(QDialog):
         # self.stm32_update_list_form.reset_device_list()
         # self.stm32_update_list_form.ui.show()
         stm32_updater = STM32FirmwareUpdater(port = modi_ports[0].device)
-        stm32_updater.set_print(False)
+        # stm32_updater.set_print(False)
         stm32_updater.set_raise_error(False)
         stm32_updater.set_ui(self.ui)
         th.Thread(
