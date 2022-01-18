@@ -66,6 +66,7 @@ class STM32FirmwareUpdater:
         self.raise_error_message = True
         self.update_error = 0
         self.update_error_message = ""
+        self.has_update_error = False
         self.update_index = 0
 
         self.open(port)
@@ -113,6 +114,7 @@ class STM32FirmwareUpdater:
             self.network_version = ".".join(module_version)
 
     def update_module_firmware(self):
+        self.has_update_error = False
         self.request_network_id()
         self.reset_state()
         for target in self.__target_ids:
@@ -244,6 +246,11 @@ class STM32FirmwareUpdater:
             page_offset = 0
             # for page_begin in range(bin_begin, bin_end + 1, page_size):
             page_begin = bin_begin
+
+            erase_error_limit = 2
+            erase_error_count = 0
+            crc_error_limit = 2
+            crc_error_count = 0
             while page_begin < bin_end :
                 # self.progress = 100 * page_begin // bin_end
                 progress = 100 * page_begin // bin_end
@@ -272,8 +279,9 @@ class STM32FirmwareUpdater:
                 curr_page = bin_buffer[page_begin:page_end]
 
                 # Skip current page if empty
-                if not sum(curr_page):
+                if curr_page == bytes(len(curr_page)):
                     page_begin = page_begin + page_size
+                    time.sleep(0.02)
                     continue
 
                 # Erase page (send erase request and receive its response)
@@ -284,8 +292,18 @@ class STM32FirmwareUpdater:
                     dest_addr=flash_memory_addr,
                     page_addr=page_begin + page_offset,
                 )
+
                 if not erase_page_success:
+                    erase_error_count = erase_error_count + 1
+                    if erase_error_count > erase_error_limit:
+                        erase_error_count = 0
+                        self.has_update_error = True
+                        self.update_error_message = f"{module_type} ({module_id}) erase flash failed."
+                        break
                     continue
+                else:
+                    erase_error_count = 0
+
                 # Copy current page data to the module's memory
                 checksum = 0
                 for curr_ptr in range(0, page_size, 8):
@@ -308,11 +326,28 @@ class STM32FirmwareUpdater:
                     dest_addr=flash_memory_addr,
                     page_addr=page_begin + page_offset,
                 )
-                if not crc_page_success:
+
+                if crc_page_success == False:
+                    crc_error_count = crc_error_count + 1
+                    if crc_error_count > crc_error_limit:
+                        crc_error_count = 0
+                        self.has_update_error = True
+                        self.update_error_message = f"{module_type} ({module_id}) check crc failed."
+                        break
+                    print("crc retry")
                     continue
+                else:
+                    crc_error_count = 0
+
                 page_begin = page_begin + page_size
                 time.sleep(0.01)
+
         self.progress = 99
+
+        verify_header = 0xAA
+        if self.has_update_error:
+            verify_header = 0xFF
+
         self.__print(f"\rUpdating {module_type} ({module_id}) {self.__progress_bar(99, 100)} 99%")
 
         # Get version info from version_path, using appropriate methods
@@ -332,7 +367,7 @@ class STM32FirmwareUpdater:
 
         # Set end-flash data to be sent at the end of the firmware update
         end_flash_data = bytearray(8)
-        end_flash_data[0] = 0xAA
+        end_flash_data[0] = verify_header
         end_flash_data[6] = version & 0xFF
         end_flash_data[7] = (version >> 8) & 0xFF
         self.send_end_flash_data(module_type, module_id, end_flash_data)
@@ -537,10 +572,10 @@ class STM32FirmwareUpdater:
 
     def receive_command_response(
         self,
-        response_delay: float = 0.001,
-        response_timeout: float = 5,
-        max_response_error_count: int = 75,
-    ) -> bool:
+        response_delay: float = 0.01,
+        response_timeout: float = 2,
+        max_response_error_count: int = 10,
+        ) -> bool:
         # Receive firmware command response
         response_wait_time = 0
         while not self.response_flag:
@@ -553,18 +588,13 @@ class STM32FirmwareUpdater:
                 self.update_error_message = "Response timed-out"
                 if self.raise_error_message:
                     raise Exception(self.update_error_message)
-                else:
-                    self.update_error = -1
+                return False
 
             # If error is raised
             if self.response_error_flag:
-                self.response_error_count += 1
-                if self.response_error_count > max_response_error_count:
-                    self.update_error_message = "Response Errored"
-                    if self.raise_error_message:
-                        raise Exception(self.update_error_message)
-                    else:
-                        self.update_error = -1
+                self.update_error_message = "Response Errored"
+                if self.raise_error_message:
+                    raise Exception(self.update_error_message)
                 self.response_error_flag = False
                 return False
 
