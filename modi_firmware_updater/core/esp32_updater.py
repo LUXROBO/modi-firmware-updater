@@ -261,7 +261,6 @@ class ESP32FirmwareUpdater(ModiSerialPort):
     @retry(Exception)
     def __send_pkt(self, pkt, wait=True, timeout=None, continuous=False):
         self.write(pkt)
-        self.reset_input_buffer()
         if wait:
             cmd = bytearray(pkt)[2]
             init_time = time.time()
@@ -551,19 +550,17 @@ class ESP32FirmwareMultiUpdater():
             total_sequence = 0
 
             for index, esp32_updater in enumerate(self.esp32_updaters):
+                if esp32_updater.network_uuid is not None:
+                    self.network_uuid[index] = f'0x{esp32_updater.network_uuid:X}'
+                    if self.list_ui:
+                        self.list_ui.network_uuid_signal.emit(index, self.network_uuid[index])
+
+
                 if self.state[index] == 0:
                     # wait for network uuid
                     is_done = False
                     if esp32_updater.update_in_progress:
-                        if esp32_updater.network_uuid:
-                            self.network_uuid[index] = f'0x{esp32_updater.network_uuid:X}'
-                            self.state[index] = 1
-                            if self.list_ui:
-                                self.list_ui.network_uuid_signal.emit(index, self.network_uuid[index])
-                        else:
-                            self.state[index] = 2
-                            esp32_updater.update_error = -1
-                            esp32_updater.update_error_message = "Not response network uuid"
+                        self.state[index] = 1
                 elif self.state[index] == 1:
                     # update modules
                     if esp32_updater.update_error == 0:
@@ -626,7 +623,7 @@ class ESP32FirmwareMultiUpdater():
                     self.list_ui.total_progress_signal.emit(current_sequence / total_sequence * 100.0)
                     self.list_ui.total_status_signal.emit("Uploading...")
 
-                print(f"\r{self.__progress_bar(current_sequence, total_sequence)}", end="")
+                print(f"{self.__progress_bar(current_sequence, total_sequence)}", end="")
 
             if is_done:
                 break
@@ -674,7 +671,4 @@ class ESP32FirmwareMultiUpdater():
     def __progress_bar(current: int, total: int) -> str:
         curr_bar = int(50 * current // total)
         rest_bar = int(50 - curr_bar)
-        return (
-            f"Firmware Upload: [{'=' * curr_bar}>{'.' * rest_bar}] "
-            f"{100 * current / total:3.1f}%"
-        )
+        return (f"\rFirmware Update: [{'=' * curr_bar}>{'.' * rest_bar}] {100 * current / total:3.1f}%")

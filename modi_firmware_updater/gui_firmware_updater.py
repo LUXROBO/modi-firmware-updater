@@ -17,7 +17,7 @@ from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QDialog
 
 from modi_firmware_updater.util.modi_winusb.modi_serialport import list_modi_serialports
-from modi_firmware_updater.core.esp32_updater import ESP32FirmwareUpdater
+from modi_firmware_updater.core.esp32_updater import ESP32FirmwareMultiUpdater
 from modi_firmware_updater.core.stm32_updater import STM32FirmwareMultiUpdater
 from modi_firmware_updater.core.stm32_network_updater import NetworkFirmwareMultiUpdater
 
@@ -261,14 +261,16 @@ class Form(QDialog):
         if not modi_ports:
             raise Exception("No MODI port is connected")
 
-        esp32_updater = ESP32FirmwareUpdater()
-        esp32_updater.set_ui(self.ui)
+        def run_task(self, modi_ports):
+            self.firmware_updater = ESP32FirmwareMultiUpdater()
+            self.firmware_updater.set_ui(self.ui, None)
+            self.firmware_updater.update_firmware([modi_ports[0]], False)
+
         th.Thread(
-            target=esp32_updater.update_firmware,
-            args=(False,),
+            target=run_task,
+            args=(self, modi_ports),
             daemon=True
         ).start()
-        self.firmware_updater = esp32_updater
 
     def update_network_esp32_interpreter(self):
         button_start = time.time()
@@ -288,14 +290,17 @@ class Form(QDialog):
 
         # self.esp32_update_list_form.reset_device_list()
         # self.esp32_update_list_form.ui.show()
-        esp32_updater = ESP32FirmwareUpdater(device=modi_ports[0])
-        esp32_updater.set_ui(self.ui)
+
+        def run_task(self, modi_ports):
+            self.firmware_updater = ESP32FirmwareMultiUpdater()
+            self.firmware_updater.set_ui(self.ui, None)
+            self.firmware_updater.update_firmware([modi_ports[0]], True)
+
         th.Thread(
-            target=esp32_updater.update_firmware,
-            args=(modi_ports, True,),
+            target=run_task,
+            args=(self, modi_ports),
             daemon=True
         ).start()
-        self.firmware_updater = esp32_updater
 
     def update_stm32_modules(self):
         button_start = time.time()
@@ -344,14 +349,14 @@ class Form(QDialog):
 
         # self.stm32_update_list_form.reset_device_list()
         # self.stm32_update_list_form.ui.show()
-        def run_task(self, modi_ports, interpreter):
+        def run_task(self, modi_ports):
             self.firmware_updater = NetworkFirmwareMultiUpdater()
             self.firmware_updater.set_ui(self.ui, None)
-            self.firmware_updater.update_module_firmware([modi_ports[0]], interpreter)
+            self.firmware_updater.update_module_firmware([modi_ports[0]], False)
 
         th.Thread(
             target=run_task,
-            args=(self, modi_ports, False),
+            args=(self, modi_ports),
             daemon=True
         ).start()
 
@@ -373,14 +378,14 @@ class Form(QDialog):
 
         # self.stm32_update_list_form.reset_device_list()
         # self.stm32_update_list_form.ui.show()
-        def run_task(self, modi_ports, interpreter):
+        def run_task(self, modi_ports):
             self.firmware_updater = NetworkFirmwareMultiUpdater()
             self.firmware_updater.set_ui(self.ui, None)
-            self.firmware_updater.update_module_firmware([modi_ports[0]], interpreter)
+            self.firmware_updater.update_module_firmware([modi_ports[0]], True)
 
         th.Thread(
             target=run_task,
-            args=(self, modi_ports, True),
+            args=(self, modi_ports),
             daemon=True
         ).start()
 
