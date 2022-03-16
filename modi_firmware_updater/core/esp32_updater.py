@@ -122,13 +122,13 @@ class ESP32FirmwareUpdater(serial.Serial):
             self.update_error = 1
 
             if self.ui:
-                self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_stm32_modules.setEnabled(True)
-                self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_stm32.setEnabled(True)
-                self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_esp32.setEnabled(True)
-                self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_stm32_bootloader.setEnabled(True)
                 if self.ui.is_english:
                     self.ui.update_network_esp32_interpreter.setText("Update Network ESP32 Interpreter")
@@ -184,13 +184,13 @@ class ESP32FirmwareUpdater(serial.Serial):
             self.update_error = 1
 
             if self.ui:
-                self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_stm32_modules.setEnabled(True)
-                self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_stm32.setEnabled(True)
-                self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_esp32_interpreter.setEnabled(True)
-                self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_stm32_bootloader.setEnabled(True)
                 if self.ui.is_english:
                     self.ui.update_network_esp32.setText("Update Network ESP32")
@@ -641,13 +641,13 @@ class ESP32FirmwareMultiUpdater():
 
         if update_interpreter:
             if self.ui:
-                self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_stm32_modules.setEnabled(True)
-                self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_stm32.setEnabled(True)
-                self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_stm32_bootloader.setEnabled(True)
-                self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_esp32.setEnabled(True)
                 if self.ui.is_english:
                     self.ui.update_network_esp32_interpreter.setText("Update Network ESP32 Interpreter")
@@ -655,13 +655,13 @@ class ESP32FirmwareMultiUpdater():
                     self.ui.update_network_esp32_interpreter.setText("네트워크 모듈 인터프리터 초기화")
         else:
             if self.ui:
-                self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_stm32_modules.setEnabled(True)
-                self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_stm32.setEnabled(True)
-                self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_stm32_bootloader.setEnabled(True)
-                self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_esp32_interpreter.setEnabled(True)
                 if self.ui.is_english:
                     self.ui.update_network_esp32.setText("Update Network ESP32")
