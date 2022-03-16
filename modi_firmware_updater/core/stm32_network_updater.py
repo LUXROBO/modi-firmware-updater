@@ -764,7 +764,7 @@ class NetworkFirmwareMultiUpdater():
                 time.sleep(0.001)
 
             if len(self.network_updaters):
-                print(f"\r{self.__progress_bar(total_progress, 100)}", end="")
+                print(f"{self.__progress_bar(total_progress, 100)}", end="")
 
                 if self.ui:
                     if bootloader:
@@ -824,7 +824,4 @@ class NetworkFirmwareMultiUpdater():
     def __progress_bar(current: int, total: int) -> str:
         curr_bar = int(50 * current // total)
         rest_bar = int(50 - curr_bar)
-        return (
-            f"Firmware Upload: [{'=' * curr_bar}>{'.' * rest_bar}] "
-            f"{100 * current / total:3.1f}%"
-        )
+        return (f"\rFirmware Update: [{'=' * curr_bar}>{'.' * rest_bar}] {100 * current / total:3.1f}%")
