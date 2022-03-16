@@ -458,7 +458,7 @@ class ESP32FirmwareUpdater(ModiSerialPort):
                 self.ui.update_network_esp32.setText("네트워크 모듈 업데이트가 진행중입니다. (99%)")
         self.current_sequence = 99
         self.total_sequence = 100
-        self.__print(f"\r{self.__progress_bar(99, 100)}")
+        self.__print(f"{self.__progress_bar(99, 100)}")
         self.__print("Firmware Upload Complete")
 
     def __write_chunk(self, chunk, curr_seq, total_seq, manager):
@@ -480,7 +480,7 @@ class ESP32FirmwareUpdater(ModiSerialPort):
                 else:
                     self.ui.update_network_esp32.setText(f"네트워크 모듈 업데이트가 진행중입니다. ({int((curr_seq+seq)/total_seq*100)}%)")
             self.__print(
-                f"\r{self.__progress_bar(curr_seq + seq, total_seq)}", end=""
+                f"{self.__progress_bar(curr_seq + seq, total_seq)}", end=""
             )
             self.__write_flash_block(block, seq)
         return len(block_queue)
@@ -497,7 +497,7 @@ class ESP32FirmwareUpdater(ModiSerialPort):
         curr_bar = 50 * current // total
         rest_bar = 50 - curr_bar
         return (
-            f"Firmware Upload: [{'=' * curr_bar}>{'.' * rest_bar}] "
+            f"\rFirmware Upload: [{'=' * curr_bar}>{'.' * rest_bar}] "
             f"{100 * current / total:3.1f}%"
         )
 
@@ -554,7 +554,6 @@ class ESP32FirmwareMultiUpdater():
                     self.network_uuid[index] = f'0x{esp32_updater.network_uuid:X}'
                     if self.list_ui:
                         self.list_ui.network_uuid_signal.emit(index, self.network_uuid[index])
-
 
                 if self.state[index] == 0:
                     # wait for network uuid
