@@ -1,4 +1,3 @@
-import logging
 import os
 import pathlib
 import sys
@@ -13,14 +12,14 @@ from io import open
 from os import path
 from urllib.error import URLError
 
-from PyQt5 import QtCore, QtGui, QtWidgets, uic
+from PyQt5 import QtGui, QtWidgets, uic
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QDialog
 
-from modi_firmware_updater.util.connection_util import list_modi_ports
+from modi_firmware_updater.util.modi_winusb.modi_serialport import list_modi_serialports
 from modi_firmware_updater.core.esp32_updater import ESP32FirmwareUpdater
-from modi_firmware_updater.core.stm32_updater import STM32FirmwareUpdater
-from modi_firmware_updater.core.stm32_network_updater import NetworkFirmwareUpdater
+from modi_firmware_updater.core.stm32_updater import STM32FirmwareMultiUpdater
+# from modi_firmware_updater.core.stm32_network_updater import NetworkFirmwareUpdater
 
 
 class StdoutRedirect(QObject):
@@ -31,7 +30,6 @@ class StdoutRedirect(QObject):
         self.daemon = True
         self.sysstdout = sys.stdout.write
         self.sysstderr = sys.stderr.write
-        self.logger = None
 
     def stop(self):
         sys.stdout.write = self.sysstdout
@@ -44,16 +42,6 @@ class StdoutRedirect(QObject):
     def write(self, s, color="black"):
         sys.stdout.flush()
         self.printOccur.emit(s, color)
-        if self.logger and not self.__is_redundant_line(s):
-            self.logger.info(s)
-
-    @staticmethod
-    def __is_redundant_line(line):
-        return (
-            line.startswith("\rUpdating") or
-            line.startswith("\rFirmware Upload: [") or
-            len(line) < 3
-        )
 
 
 class PopupMessageBox(QtWidgets.QMessageBox):
@@ -81,8 +69,6 @@ class PopupMessageBox(QtWidgets.QMessageBox):
 
         close_btn = self.addButton("Exit", self.ActionRole)
         close_btn.clicked.connect(self.close_btn)
-        # report_btn = self.addButton('Report Error', self.ActionRole)
-        # report_btn.clicked.connect(self.report_btn)
         self.show()
 
     def event(self, e):
@@ -116,15 +102,6 @@ class PopupMessageBox(QtWidgets.QMessageBox):
     def close_btn(self):
         self.window.close()
 
-    def report_btn(self):
-        pass
-    # def restart_btn(self):
-    #     self.window.stream.thread_signal.connect(self.restart_update)
-    #     self.window.stream.thread_signal.emit(True)
-    # @pyqtSlot(object)
-    # def restart_update(self, click):
-    #     self.window.update_network_stm32.clicked(click)
-
 
 class ThreadSignal(QObject):
     thread_error = pyqtSignal(object)
@@ -141,7 +118,6 @@ class Form(QDialog):
 
     def __init__(self, installer=False):
         QDialog.__init__(self)
-        self.logger = self.__init_logger()
         self.__excepthook = sys.excepthook
         sys.excepthook = self.__popup_excepthook
         th.excepthook = self.__popup_thread_excepthook
@@ -192,10 +168,7 @@ class Form(QDialog):
         # Redirect stdout to text browser (i.e. console in our UI)
         self.stdout = StdoutRedirect()
         self.stdout.start()
-        self.stdout.printOccur.connect(
-            lambda line: self.__append_text_line(line)
-        )
-        self.stdout.logger = self.logger
+        self.stdout.printOccur.connect(lambda line: self.__append_text_line(line))
 
         # Set signal for thread communication
         self.stream = ThreadSignal()
@@ -239,7 +212,6 @@ class Form(QDialog):
         self.ui.language_frame_path = self.language_frame_path
         self.ui.language_frame_pressed_path = self.language_frame_pressed_path
         self.ui.stream = self.stream
-        self.ui.popup = self._thread_signal_hook
 
         # Check module firmware
         self.local_firmware_path = path.join(path.dirname(__file__), "assets", "firmware", "latest")
@@ -285,7 +257,7 @@ class Form(QDialog):
             target=self.__click_motion, args=(0, button_start), daemon=True
         ).start()
 
-        modi_ports = list_modi_ports()
+        modi_ports = list_modi_serialports()
         if not modi_ports:
             raise Exception("No MODI port is connected")
 
@@ -310,13 +282,13 @@ class Form(QDialog):
             target=self.__click_motion, args=(1, button_start), daemon=True
         ).start()
 
-        modi_ports = list_modi_ports()
+        modi_ports = list_modi_serialports()
         if not modi_ports:
             raise Exception("No MODI port is connected")
 
         # self.esp32_update_list_form.reset_device_list()
         # self.esp32_update_list_form.ui.show()
-        esp32_updater = ESP32FirmwareUpdater()
+        esp32_updater = ESP32FirmwareUpdater(device=modi_ports[0])
         esp32_updater.set_ui(self.ui)
         th.Thread(
             target=esp32_updater.update_firmware,
@@ -337,22 +309,22 @@ class Form(QDialog):
             target=self.__click_motion, args=(2, button_start), daemon=True
         ).start()
 
-        modi_ports = list_modi_ports()
+        modi_ports = list_modi_serialports()
         if not modi_ports:
             raise Exception("No MODI port is connected")
 
         # self.stm32_update_list_form.reset_device_list()
         # self.stm32_update_list_form.ui.show()
-        stm32_updater = STM32FirmwareUpdater(port = modi_ports[0].device)
-        # stm32_updater.set_print(False)
-        stm32_updater.set_raise_error(False)
-        stm32_updater.set_ui(self.ui)
+        def run_task(self, modi_ports):
+            self.firmware_updater = STM32FirmwareMultiUpdater()
+            self.firmware_updater.set_ui(self.ui, None)
+            self.firmware_updater.update_module_firmware([modi_ports[0]])
+
         th.Thread(
-            target=stm32_updater.update_module_firmware,
-            # args=(modi_ports, ),
-            daemon=True,
+            target=run_task,
+            args=(self, modi_ports),
+            daemon=True
         ).start()
-        self.firmware_updater = stm32_updater
 
     def update_network_stm32(self):
         button_start = time.time()
@@ -366,13 +338,13 @@ class Form(QDialog):
             target=self.__click_motion, args=(3, button_start), daemon=True
         ).start()
 
-        modi_ports = list_modi_ports()
+        modi_ports = list_modi_serialports()
         if not modi_ports:
             raise Exception("No MODI port is connected")
 
         # self.stm32_update_list_form.reset_device_list()
         # self.stm32_update_list_form.ui.show()
-        network_updater = NetworkFirmwareUpdater(modi_ports[0].device)
+        network_updater = NetworkFirmwareUpdater(modi_ports[0])
         network_updater.set_ui(self.ui)
         th.Thread(
             target=network_updater.update_module_firmware,
@@ -393,7 +365,7 @@ class Form(QDialog):
             target=self.__click_motion, args=(4, button_start), daemon=True
         ).start()
 
-        modi_ports = list_modi_ports()
+        modi_ports = list_modi_serialports()
         if not modi_ports:
             raise Exception("No MODI port is connected")
 
@@ -641,18 +613,6 @@ class Form(QDialog):
     #
     # Helper functions
     #
-    @staticmethod
-    def __init_logger():
-        logger = logging.getLogger("GUI MODI Firmware Updater Logger")
-        logger.setLevel(logging.DEBUG)
-
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-        file_handler = logging.FileHandler("gmfu.log")
-        file_handler.setLevel(logging.DEBUG)
-        file_handler.setFormatter(formatter)
-
-        return logger
-
     def __popup_excepthook(self, exctype, value, traceback):
         self.__excepthook(exctype, value, traceback)
         if self.is_popup:
@@ -675,19 +635,6 @@ class Form(QDialog):
             err_msg.exc_type, err_msg.exc_value, err_msg.exc_traceback
         )
 
-    @pyqtSlot(object)
-    def _thread_signal_hook(self):
-        self.thread_popup = PopupMessageBox(self.ui, level="warning")
-        if self.button_in_english:
-            text = (
-                "Reconnect network module and "
-                "click the button again please."
-            )
-        else:
-            text = "네트워크 모듈을 재연결 후 버튼을 다시 눌러주십시오."
-        self.thread_popup.setInformativeText(text)
-        self.is_popup = True
-
     def __click_motion(self, button_type, start_time):
         # Busy wait for 0.2 seconds
         while time.time() - start_time < 0.2:
@@ -704,15 +651,9 @@ class Form(QDialog):
                 q_button.setEnabled(False)
 
     def __append_text_line(self, line):
-        self.ui.console.moveCursor(
-            QtGui.QTextCursor.End, QtGui.QTextCursor.MoveAnchor
-        )
-        self.ui.console.moveCursor(
-            QtGui.QTextCursor.StartOfLine, QtGui.QTextCursor.MoveAnchor
-        )
-        self.ui.console.moveCursor(
-            QtGui.QTextCursor.End, QtGui.QTextCursor.KeepAnchor
-        )
+        self.ui.console.moveCursor(QtGui.QTextCursor.End, QtGui.QTextCursor.MoveAnchor)
+        self.ui.console.moveCursor(QtGui.QTextCursor.StartOfLine, QtGui.QTextCursor.MoveAnchor)
+        self.ui.console.moveCursor(QtGui.QTextCursor.End, QtGui.QTextCursor.KeepAnchor)
 
         # Remove new line character if current line represents update_progress
         if self.__is_update_progress_line(line):
@@ -722,13 +663,10 @@ class Form(QDialog):
         # Display user text input
         self.ui.console.moveCursor(QtGui.QTextCursor.End)
         self.ui.console.insertPlainText(line)
-        # QtWidgets.QApplication.processEvents(
-        #     QtCore.QEventLoop.ExcludeUserInputEvents
-        # )
 
     @staticmethod
     def __is_update_progress_line(line):
-        return line.startswith("\rUpdating") or line.startswith("\rFirmware Upload: [")
+        return line.startswith("\r")
 
 class ESP32UpdateListForm(QDialog):
     network_state_signal = pyqtSignal(int, int)

@@ -8,15 +8,9 @@ from base64 import b64decode, b64encode
 from io import open
 from os import path
 
-import serial
-import serial.tools.list_ports as stl
-
-from modi_firmware_updater.util.connection_util import list_modi_ports
-from modi_firmware_updater.util.message_util import (decode_message,
-                                                     parse_message,
-                                                     unpack_data)
-from modi_firmware_updater.util.module_util import (Module,
-                                                    get_module_type_from_uuid)
+from modi_firmware_updater.util.message_util import unpack_data
+from modi_firmware_updater.util.modi_winusb.modi_serialport import ModiSerialPort, list_modi_serialports
+from modi_firmware_updater.util.module_util import get_module_type_from_uuid
 
 def retry(exception_to_catch):
     def decorator(func):
@@ -31,7 +25,7 @@ def retry(exception_to_catch):
     return decorator
 
 
-class ESP32FirmwareUpdater(serial.Serial):
+class ESP32FirmwareUpdater(ModiSerialPort):
     DEVICE_READY = 0x2B
     DEVICE_SYNC = 0x08
     SPI_ATTACH_REQ = 0xD
@@ -47,24 +41,20 @@ class ESP32FirmwareUpdater(serial.Serial):
     def __init__(self, device=None):
         self.print = True
         if device != None:
-            super().__init__(
-                device, timeout = 0.1, baudrate = 921600
-            )
+            super().__init__(device, baudrate=921600, timeout=0.1)
         else:
-            modi_ports = list_modi_ports()
+            modi_ports = list_modi_serialports()
             if not modi_ports:
-                raise serial.SerialException("No MODI port is connected")
+                raise Exception("No MODI port is connected")
             for modi_port in modi_ports:
                 try:
-                    super().__init__(
-                        modi_port.device, timeout=0.1, baudrate=921600
-                    )
+                    super().__init__(modi_port, baudrate=921600, timeout=0.1)
                 except Exception:
                     self.__print('Next network module')
                     continue
                 else:
                     break
-            self.__print(f"Connecting to MODI network module at {modi_port.device}")
+            self.__print(f"Connecting to MODI network module at {modi_port}")
 
         self.__address = [0x1000, 0x8000, 0xD000, 0x10000, 0xD0000]
         self.file_path = [
@@ -337,7 +327,12 @@ class ESP32FirmwareUpdater(serial.Serial):
             self.write(get_version_pkt)
 
             try:
-                json_msg = json.loads(self.__wait_for_json())
+                msg = self.__wait_for_json()
+                if not msg:
+                    time.sleep(0.2)
+                    continue
+
+                json_msg = json.loads(msg)
                 if json_msg["c"] == 0xA1:
                     break
             except json.decoder.JSONDecodeError as jde:
@@ -362,7 +357,12 @@ class ESP32FirmwareUpdater(serial.Serial):
         while True:
             self.write(version_msg_enc)
             try:
-                json_msg = json.loads(self.__wait_for_json())
+                msg = self.__wait_for_json()
+                if not msg:
+                    time.sleep(0.2)
+                    continue
+
+                json_msg = json.loads(msg)
                 if json_msg["c"] == 0xA1:
                     break
                 self.__boot_to_app()
@@ -521,7 +521,7 @@ class ESP32FirmwareMultiUpdater():
             if i > 9:
                 break
             try:
-                esp32_updater = ESP32FirmwareUpdater(modi_port.device)
+                esp32_updater = ESP32FirmwareUpdater(modi_port)
                 esp32_updater.set_print(False)
                 esp32_updater.set_raise_error(False)
             except Exception as e:
