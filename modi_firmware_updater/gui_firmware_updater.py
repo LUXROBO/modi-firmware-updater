@@ -19,7 +19,7 @@ from PyQt5.QtWidgets import QDialog
 from modi_firmware_updater.util.modi_winusb.modi_serialport import list_modi_serialports
 from modi_firmware_updater.core.esp32_updater import ESP32FirmwareUpdater
 from modi_firmware_updater.core.stm32_updater import STM32FirmwareMultiUpdater
-# from modi_firmware_updater.core.stm32_network_updater import NetworkFirmwareUpdater
+from modi_firmware_updater.core.stm32_network_updater import NetworkFirmwareMultiUpdater
 
 
 class StdoutRedirect(QObject):
@@ -344,14 +344,16 @@ class Form(QDialog):
 
         # self.stm32_update_list_form.reset_device_list()
         # self.stm32_update_list_form.ui.show()
-        network_updater = NetworkFirmwareUpdater(modi_ports[0])
-        network_updater.set_ui(self.ui)
+        def run_task(self, modi_ports, interpreter):
+            self.firmware_updater = NetworkFirmwareMultiUpdater()
+            self.firmware_updater.set_ui(self.ui, None)
+            self.firmware_updater.update_module_firmware([modi_ports[0]], interpreter)
+
         th.Thread(
-            target=network_updater.update_module_firmware,
-            args=(False,),
-            daemon=True,
+            target=run_task,
+            args=(self, modi_ports, False),
+            daemon=True
         ).start()
-        self.firmware_updater = network_updater
 
     def update_network_bootloader_stm32(self):
         button_start = time.time()
@@ -371,14 +373,16 @@ class Form(QDialog):
 
         # self.stm32_update_list_form.reset_device_list()
         # self.stm32_update_list_form.ui.show()
-        network_updater = NetworkFirmwareUpdater()
-        network_updater.set_ui(self.ui)
+        def run_task(self, modi_ports, interpreter):
+            self.firmware_updater = NetworkFirmwareMultiUpdater()
+            self.firmware_updater.set_ui(self.ui, None)
+            self.firmware_updater.update_module_firmware([modi_ports[0]], interpreter)
+
         th.Thread(
-            target=network_updater.update_module_firmware,
-            args=(True,),
-            daemon=True,
+            target=run_task,
+            args=(self, modi_ports, True),
+            daemon=True
         ).start()
-        self.firmware_updater = network_updater
 
     def dev_mode_button(self):
         button_start = time.time()
