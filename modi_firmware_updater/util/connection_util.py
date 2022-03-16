@@ -110,6 +110,7 @@ class SerTask(ConnTask):
         ser.baudrate = 921600
         ser.port = port
         ser.write_timeout = 0
+        ser.timeout = 0.1
         return ser
 
     def close_conn(self) -> None:
