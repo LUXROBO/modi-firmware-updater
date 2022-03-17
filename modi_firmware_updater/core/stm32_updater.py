@@ -87,6 +87,8 @@ class STM32FirmwareUpdater(ModiSerialPort):
             target=self.module_firmware_update_manager, daemon=True
         ).start()
 
+        self.thread_event = th.Event()
+
     def module_firmware_update_manager(self):
         timeout_count = 0
         timeout_delay = 0.1
@@ -346,7 +348,7 @@ class STM32FirmwareUpdater(ModiSerialPort):
                         bin_data=curr_data,
                         crc_val=checksum,
                     )
-                    self.__delay(0.001)
+                    self.thread_event.wait(0.001)
                 # CRC on current page (send CRC request / receive CRC response)
                 crc_page_success = self.send_firmware_command(
                     oper_type="crc",
@@ -413,14 +415,6 @@ class STM32FirmwareUpdater(ModiSerialPort):
             self.progress = 100
             self.__print(f"\rUpdating {module_type} ({module_id}) {self.__progress_bar(1, 1)} 100%")
             self.modules_updated.append((module_id, module_type))
-
-    @staticmethod
-    def __delay(span):
-        # time.sleep(span)
-        init_time = time.perf_counter()
-        while time.perf_counter() - init_time < span:
-            pass
-        return
 
     @staticmethod
     def __set_module_state(
