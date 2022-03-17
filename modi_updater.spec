@@ -3,8 +3,6 @@
 import os
 import sys
 
-from platform import system
-
 cwd = os.getcwd()
 
 site_package_paths = [path for path in sys.path if path.endswith('site-packages')]
@@ -19,6 +17,7 @@ a = Analysis(
     # Put data(i.e. assets) under virtual 'modi_firmware_updater/'
     datas=[
         ('modi_firmware_updater/assets', 'modi_firmware_updater/assets'),
+        ('modi_firmware_updater/core', 'modi_firmware_updater/core'),
     ],
     hiddenimports=[
         "modi_firmware_updater.util.connection_util",
@@ -58,7 +57,8 @@ app = BUNDLE(
     bundle_identifier=None,
 )
 
-if system == 'Darwin':
+import platform
+if platform.system() == 'Darwin':
     import plistlib
     from pathlib import Path
 
@@ -81,4 +81,4 @@ if system == 'Darwin':
         f.write(shell_script)
 
     # make it executable
-    (app_path  / 'Contents/MacOS/wrapper').chmod(0o755)
+    (app_path / 'Contents/MacOS/wrapper').chmod(0o755)
