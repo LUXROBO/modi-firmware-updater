@@ -91,18 +91,54 @@ class ESP32FirmwareUpdater(ModiSerialPort):
     def update_firmware(self, update_interpreter=False, force=False):
         if update_interpreter:
             self.current_sequence = 0
-            self.total_sequence = 1
+            self.total_sequence = 100
+            self.update_in_progress = True
+
             self.__print("get network uuid")
             self.network_uuid = self.get_network_uuid()
 
+            time.sleep(1)
             self.__print("Reset interpreter...")
-            self.update_in_progress = True
 
-            self.write(b'{"c":160,"s":0,"d":18,"b":"AAMAAAAA","l":6}')
+            init_time = time.time()
+            while True:
+                self.write(b'{"c":160,"s":0,"d":18,"b":"AAMAAAAA","l":6}')
+                self.current_sequence = self.current_sequence + 5
+                if self.current_sequence > 90:
+                    self.current_sequence = 90
+
+                try:
+                    msg = self.__wait_for_json()
+                    if not msg:
+                        break
+
+                    json_msg = json.loads(msg)
+                    if json_msg["c"] == 0xA1:
+                        break
+                except json.decoder.JSONDecodeError as jde:
+                    self.__print("json parse error: " + str(jde))
+                    break
+                except:
+                    self.__print("error")
+                    break
+
+                if time.time() - init_time > 5:
+                    break
+
+                time.sleep(0.1)
+
             self.__print("ESP interpreter reset is complete!!")
 
-            self.current_sequence = 1
-            self.total_sequence = 1
+            init_count = self.current_sequence
+            for _ in range(init_count, 100):
+                self.current_sequence = self.current_sequence + 5
+                if self.current_sequence > 100:
+                    self.current_sequence = 100
+                    break
+                time.sleep(0.05)
+
+            self.current_sequence = 100
+            self.total_sequence = 100
 
             time.sleep(1)
             self.update_in_progress = False
