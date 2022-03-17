@@ -81,6 +81,8 @@ class NetworkFirmwareUpdater(ModiSerialPort):
         self.update_error_message = ""
         self.has_update_error = False
 
+        self.thread_event = th.Event()
+
     def set_ui(self, ui):
         self.ui = ui
 
@@ -499,7 +501,7 @@ class NetworkFirmwareUpdater(ModiSerialPort):
 
                 curr_data = curr_page[curr_ptr : curr_ptr + 8]
                 checksum = self.set_firmware_data(module_id, curr_ptr // 8, curr_data, checksum)
-                self.__delay(0.001)
+                self.thread_event.wait(0.001)
 
             # CRC on current page (send CRC request / receive CRC response)
             crc_page_success = self.set_firmware_command(
@@ -619,27 +621,6 @@ class NetworkFirmwareUpdater(ModiSerialPort):
             if time.time() - init_time > timeout:
                 return None
         return json_msg
-
-    @staticmethod
-    def __delay(span):
-        # time.sleep(span)
-        init_time = time.perf_counter()
-        while time.perf_counter() - init_time < span:
-            pass
-        return
-
-    @staticmethod
-    def __compare_version(
-        left: str, right: str
-    ) -> int:
-        left_vars = map(int, left.split('.'))
-        right_vars = map(int, right.split('.'))
-        for a, b in zip_longest(left_vars, right_vars, fillvalue = 0):
-            if a > b:
-                return -1
-            elif a < b:
-                return 1
-        return 0
 
     def calc_crc32(self, data: bytes, crc: int) -> int:
         crc ^= int.from_bytes(data, byteorder="little", signed=False)
