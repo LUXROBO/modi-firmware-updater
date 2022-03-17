@@ -66,8 +66,8 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: dist/modi_updater
-          asset_name: modi_updater
+          file: dist/modi_updater.app
+          asset_name: modi_updater.app
           tag: ${{ github.ref }}
           overwrite: true
 
