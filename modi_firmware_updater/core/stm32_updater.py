@@ -69,6 +69,9 @@ class STM32FirmwareUpdater(ModiSerialPort):
         self.has_update_error = False
         self.this_update_error = False
 
+        self.thread_event = th.Event()
+        self.__delay_flag = 0
+
         if device is not None:
             super().__init__(device, baudrate=921600, timeout=0.1, write_timeout=0)
         else:
@@ -90,8 +93,6 @@ class STM32FirmwareUpdater(ModiSerialPort):
         th.Thread(
             target=self.module_firmware_update_manager, daemon=True
         ).start()
-
-        self.thread_event = th.Event()
 
     def module_firmware_update_manager(self):
         timeout_count = 0
@@ -352,7 +353,7 @@ class STM32FirmwareUpdater(ModiSerialPort):
                         bin_data=curr_data,
                         crc_val=checksum,
                     )
-                    self.thread_event.wait(0.001)
+                    self.__delay(0.001)
                 # CRC on current page (send CRC request / receive CRC response)
                 crc_page_success = self.send_firmware_command(
                     oper_type="crc",
@@ -419,6 +420,23 @@ class STM32FirmwareUpdater(ModiSerialPort):
             self.progress = 100
             self.__print(f"\rUpdating {module_type} ({module_id}) {self.__progress_bar(1, 1)} 100%")
             self.modules_updated.append((module_id, module_type))
+
+    def __delay(self, span):
+        if self.__delay_flag == 0:
+            start_time = time.time()
+            self.thread_event.wait(span)
+            check = time.time() - start_time
+            import math
+            if math.fabs(check - span) > 0.005:
+                self.__delay_flag = 1
+            else:
+                self.__delay_flag = 2
+        elif self.__delay_flag == 1:
+            init_time = time.perf_counter()
+            while time.perf_counter() - init_time < span:
+                pass
+        elif self.__delay_flag == 2:
+            self.thread_event.wait(span)
 
     @staticmethod
     def __set_module_state(
@@ -634,6 +652,7 @@ class STM32FirmwareUpdater(ModiSerialPort):
     def __send_conn(self, data):
         # print("send", data)
         self.write(data)
+        self.flush()
 
     def __read_conn(self):
         for _ in range(0, 3):

@@ -83,6 +83,7 @@ class NetworkFirmwareUpdater(ModiSerialPort):
         self.has_update_error = False
 
         self.thread_event = th.Event()
+        self.__delay_flag = 0
 
     def set_ui(self, ui):
         self.ui = ui
@@ -499,7 +500,7 @@ class NetworkFirmwareUpdater(ModiSerialPort):
 
                 curr_data = curr_page[curr_ptr:curr_ptr + 8]
                 checksum = self.set_firmware_data(module_id, curr_ptr // 8, curr_data, checksum)
-                self.thread_event.wait(0.001)
+                self.__delay(0.001)
 
             # CRC on current page (send CRC request / receive CRC response)
             crc_page_success = self.set_firmware_command(
@@ -636,6 +637,23 @@ class NetworkFirmwareUpdater(ModiSerialPort):
         checksum = self.calc_crc32(data[:4], checksum)
         checksum = self.calc_crc32(data[4:], checksum)
         return checksum
+
+    def __delay(self, span):
+        if self.__delay_flag == 0:
+            start_time = time.time()
+            self.thread_event.wait(span)
+            check = time.time() - start_time
+            import math
+            if math.fabs(check - span) > 0.005:
+                self.__delay_flag = 1
+            else:
+                self.__delay_flag = 2
+        elif self.__delay_flag == 1:
+            init_time = time.perf_counter()
+            while time.perf_counter() - init_time < span:
+                pass
+        elif self.__delay_flag == 2:
+            self.thread_event.wait(span)
 
     def __progress_bar(self, current, total):
         curr_bar = 50 * current // total
