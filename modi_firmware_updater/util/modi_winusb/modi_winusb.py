@@ -1,14 +1,28 @@
 import ctypes
 import time
-from ctypes import byref, c_byte, c_ubyte, c_ulong, c_void_p, create_string_buffer, resize, sizeof, wstring_at
+from ctypes import (byref, c_byte, c_ubyte, c_ulong, c_void_p,
+                    create_string_buffer, resize, sizeof, wstring_at)
 from ctypes.wintypes import DWORD
 
-from winusbcdc import (DIGCF_ALLCLASSES, DIGCF_DEFAULT, DIGCF_DEVICE_INTERFACE, DIGCF_PRESENT, DIGCF_PROFILE, ERROR_IO_INCOMPLETE, ERROR_IO_PENDING, FILE_ATTRIBUTE_NORMAL, FILE_FLAG_OVERLAPPED,
-                       FILE_SHARE_READ, FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE, GUID, INVALID_HANDLE_VALUE, OPEN_EXISTING, SPDRP_FRIENDLYNAME, Close_Handle, CreateFile, GetLastError,
-                       Overlapped, PipeInfo, SetupDiEnumDeviceInterfaces, SetupDiGetClassDevs, SetupDiGetDeviceInterfaceDetail, SetupDiGetDeviceRegistryProperty, SpDeviceInterfaceData,
-                       SpDeviceInterfaceDetailData, SpDevinfoData, UsbInterfaceDescriptor, UsbSetupPacket, WinUsb_ControlTransfer, WinUsb_FlushPipe, WinUsb_Free, WinUsb_GetAssociatedInterface,
-                       WinUsb_GetOverlappedResult, WinUsb_Initialize, WinUsb_QueryDeviceInformation, WinUsb_QueryInterfaceSettings, WinUsb_QueryPipe, WinUsb_ReadPipe, WinUsb_SetPipePolicy,
-                       WinUsb_WritePipe, WinUSBApi, is_device)
+from winusbcdc import (DIGCF_ALLCLASSES, DIGCF_DEFAULT, DIGCF_DEVICE_INTERFACE,
+                       DIGCF_PRESENT, DIGCF_PROFILE, ERROR_IO_INCOMPLETE,
+                       ERROR_IO_PENDING, FILE_ATTRIBUTE_NORMAL,
+                       FILE_FLAG_OVERLAPPED, FILE_SHARE_READ, FILE_SHARE_WRITE,
+                       GENERIC_READ, GENERIC_WRITE, GUID, INVALID_HANDLE_VALUE,
+                       OPEN_EXISTING, SPDRP_FRIENDLYNAME, Close_Handle,
+                       CreateFile, GetLastError, Overlapped, PipeInfo,
+                       SetupDiEnumDeviceInterfaces, SetupDiGetClassDevs,
+                       SetupDiGetDeviceInterfaceDetail,
+                       SetupDiGetDeviceRegistryProperty, SpDeviceInterfaceData,
+                       SpDeviceInterfaceDetailData, SpDevinfoData,
+                       UsbInterfaceDescriptor, UsbSetupPacket,
+                       WinUsb_ControlTransfer, WinUsb_FlushPipe, WinUsb_Free,
+                       WinUsb_GetAssociatedInterface,
+                       WinUsb_GetOverlappedResult, WinUsb_Initialize,
+                       WinUsb_QueryDeviceInformation,
+                       WinUsb_QueryInterfaceSettings, WinUsb_QueryPipe,
+                       WinUsb_ReadPipe, WinUsb_SetPipePolicy, WinUsb_WritePipe,
+                       WinUSBApi, is_device)
 from winusbcdc.usb_cdc import CDC_CMDS
 
 

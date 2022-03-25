@@ -1,13 +1,13 @@
+import io
 import os
 import pathlib
+import shutil
 import sys
 import threading as th
 import time
 import traceback as tb
-import io
 import urllib.request as ur
 import zipfile
-import shutil
 from io import open
 from os import path
 from urllib.error import URLError
@@ -16,10 +16,12 @@ from PyQt5 import QtGui, QtWidgets, uic
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QDialog
 
-from modi_firmware_updater.util.modi_winusb.modi_serialport import list_modi_serialports
 from modi_firmware_updater.core.esp32_updater import ESP32FirmwareMultiUpdater
+from modi_firmware_updater.core.stm32_network_updater import \
+    NetworkFirmwareMultiUpdater
 from modi_firmware_updater.core.stm32_updater import STM32FirmwareMultiUpdater
-from modi_firmware_updater.core.stm32_network_updater import NetworkFirmwareMultiUpdater
+from modi_firmware_updater.util.modi_winusb.modi_serialport import \
+    list_modi_serialports
 
 
 class StdoutRedirect(QObject):

@@ -15,7 +15,8 @@ def list_modi_serialports():
         info_list.append(modi_port.device)
 
     if sys.platform.startswith("win"):
-        from modi_firmware_updater.util.modi_winusb.modi_winusb import list_modi_winusb_paths
+        from modi_firmware_updater.util.modi_winusb.modi_winusb import \
+            list_modi_winusb_paths
         path_list = list_modi_winusb_paths()
         for index, value in enumerate(path_list):
             info_list.append(value)
@@ -43,7 +44,8 @@ class ModiSerialPort():
         self._port = port
 
         if sys.platform.startswith("win"):
-            from modi_firmware_updater.util.modi_winusb.modi_winusb import ModiWinUsbComPort, list_modi_winusb_paths
+            from modi_firmware_updater.util.modi_winusb.modi_winusb import (
+                ModiWinUsbComPort, list_modi_winusb_paths)
             if port in list_modi_winusb_paths():
                 self.type = self.SERIAL_MODI_WINUSB
                 winusb = ModiWinUsbComPort(path = self._port, baudrate=self._baudrate, timeout=self._timeout)
