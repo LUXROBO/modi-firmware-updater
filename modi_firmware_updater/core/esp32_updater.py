@@ -1,4 +1,3 @@
-import io
 import json
 import pathlib
 import sys
@@ -9,8 +8,10 @@ from io import open
 from os import path
 
 from modi_firmware_updater.util.message_util import unpack_data
-from modi_firmware_updater.util.modi_winusb.modi_serialport import ModiSerialPort, list_modi_serialports
+from modi_firmware_updater.util.modi_winusb.modi_serialport import (
+    ModiSerialPort, list_modi_serialports)
 from modi_firmware_updater.util.module_util import get_module_type_from_uuid
+
 
 def retry(exception_to_catch):
     def decorator(func):
@@ -40,7 +41,7 @@ class ESP32FirmwareUpdater(ModiSerialPort):
 
     def __init__(self, device=None):
         self.print = True
-        if device != None:
+        if device is not None:
             super().__init__(device, baudrate=921600, timeout=0.1)
         else:
             modi_ports = list_modi_serialports()
@@ -118,8 +119,8 @@ class ESP32FirmwareUpdater(ModiSerialPort):
                 except json.decoder.JSONDecodeError as jde:
                     self.__print("json parse error: " + str(jde))
                     break
-                except:
-                    self.__print("error")
+                except Exception as e:
+                    self.__print("error: " + str(e))
                     break
 
                 if time.time() - init_time > 5:
@@ -413,7 +414,7 @@ class ESP32FirmwareUpdater(ModiSerialPort):
         for i, bin_path in enumerate(self.file_path):
             if self.ui:
                 if sys.platform.startswith("win"):
-                    root_path = pathlib.PurePosixPath(pathlib.PurePath(__file__),"..", "..", "assets", "firmware", "latest", "esp32")
+                    root_path = pathlib.PurePosixPath(pathlib.PurePath(__file__), "..", "..", "assets", "firmware", "latest", "esp32")
                 else:
                     root_path = path.join(path.dirname(__file__), "..", "assets", "firmware", "latest", "esp32")
 
@@ -474,7 +475,7 @@ class ESP32FirmwareUpdater(ModiSerialPort):
         while binary_firmware:
             if self.ESP_FLASH_CHUNK < len(binary_firmware):
                 chunk_queue.append(binary_firmware[: self.ESP_FLASH_CHUNK])
-                binary_firmware = binary_firmware[self.ESP_FLASH_CHUNK :]
+                binary_firmware = binary_firmware[self.ESP_FLASH_CHUNK:]
             else:
                 chunk_queue.append(binary_firmware[:])
                 binary_firmware = b""
@@ -502,7 +503,7 @@ class ESP32FirmwareUpdater(ModiSerialPort):
         while chunk:
             if self.ESP_FLASH_BLOCK < len(chunk):
                 block_queue.append(chunk[: self.ESP_FLASH_BLOCK])
-                chunk = chunk[self.ESP_FLASH_BLOCK :]
+                chunk = chunk[self.ESP_FLASH_BLOCK:]
             else:
                 block_queue.append(chunk[:])
                 chunk = b""
@@ -536,6 +537,7 @@ class ESP32FirmwareUpdater(ModiSerialPort):
             f"\rFirmware Upload: [{'=' * curr_bar}>{'.' * rest_bar}] "
             f"{100 * current / total:3.1f}%"
         )
+
 
 class ESP32FirmwareMultiUpdater():
     def __init__(self):

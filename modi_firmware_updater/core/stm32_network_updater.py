@@ -4,13 +4,14 @@ import threading as th
 import time
 from io import open
 from os import path
-from itertools import zip_longest
 
 from serial.serialutil import SerialException
 
 from modi_firmware_updater.util.message_util import parse_message, unpack_data
-from modi_firmware_updater.util.modi_winusb.modi_serialport import ModiSerialPort, list_modi_serialports
-from modi_firmware_updater.util.module_util import Module, get_module_type_from_uuid
+from modi_firmware_updater.util.modi_winusb.modi_serialport import (
+    ModiSerialPort, list_modi_serialports)
+from modi_firmware_updater.util.module_util import (Module,
+                                                    get_module_type_from_uuid)
 
 
 def retry(exception_to_catch):
@@ -50,7 +51,7 @@ class NetworkFirmwareUpdater(ModiSerialPort):
 
     def __init__(self, device=None):
         self.print = True
-        if device != None:
+        if device is not None:
             super().__init__(device, baudrate=921600, timeout=0.1, write_timeout=0)
         else:
             modi_ports = list_modi_serialports()
@@ -58,14 +59,14 @@ class NetworkFirmwareUpdater(ModiSerialPort):
                 raise SerialException("No MODI port is connected")
             for modi_port in modi_ports:
                 try:
-                    super().__init__(modi_port, baudrate = 921600, timeout = 0.1, write_timeout = 0)
+                    super().__init__(modi_port, baudrate=921600, timeout=0.1, write_timeout=0)
                 except Exception:
                     self.__print('Next network module')
                     continue
                 else:
                     break
             self.__print(f"Connecting to MODI network module at {modi_port}")
-        
+
         self.bootloader = False
         self.network_version = None
         self.network_uuid = None
@@ -82,6 +83,7 @@ class NetworkFirmwareUpdater(ModiSerialPort):
         self.has_update_error = False
 
         self.thread_event = th.Event()
+        self.__delay_flag = 0
 
     def set_ui(self, ui):
         self.ui = ui
@@ -120,12 +122,12 @@ class NetworkFirmwareUpdater(ModiSerialPort):
                             str((module_version_digits & 0x1F00) >> 8),  # minor
                             str(module_version_digits & 0x00FF)   # patch
                         ]
-                        return module_uuid , ".".join(module_version)
+                        return module_uuid, ".".join(module_version)
                 elif json_msg["c"] == 0x0A:
                     module_uuid = unpack_data(json_msg["b"], (6, 2))[0]
                     module_type = get_module_type_from_uuid(module_uuid)
                     if module_type == "network":
-                        return module_uuid , None
+                        return module_uuid, None
             except json.decoder.JSONDecodeError as jde:
                 self.__print("json parse error: " + str(jde))
 
@@ -175,7 +177,7 @@ class NetworkFirmwareUpdater(ModiSerialPort):
         if self.is_open:
             self.write(send_pkt.encode("utf8"))
 
-    def receive_firmware_command_response(self, delay = 0.001, timeout = 5):
+    def receive_firmware_command_response(self, delay=0.001, timeout=5):
         response_wait_time = time.time()
         while True:
             responese_success = False
@@ -296,7 +298,7 @@ class NetworkFirmwareUpdater(ModiSerialPort):
                 time.sleep(0.05)
 
             self.send_set_network_module_state(self.network_id, Module.UPDATE_FIRMWARE, Module.PNP_OFF)
-            
+
             for _ in range(0, 100):
                 self.progress = self.progress + 5
                 if self.progress > 100:
@@ -308,7 +310,7 @@ class NetworkFirmwareUpdater(ModiSerialPort):
                 try:
                     self.flushInput()
                     self.flushOutput()
-                except:
+                except Exception:
                     pass
                 self.close()
 
@@ -352,7 +354,7 @@ class NetworkFirmwareUpdater(ModiSerialPort):
 
                             if warning_type == 1:
                                 self.send_set_module_state(self.network_id, Module.UPDATE_FIRMWARE_READY, Module.PNP_OFF)
-                            if  warning_type == 2:
+                            if warning_type == 2:
                                 break
                 except json.decoder.JSONDecodeError as jde:
                     self.__print("json parse error: " + str(jde))
@@ -425,16 +427,13 @@ class NetworkFirmwareUpdater(ModiSerialPort):
                 else:
                     self.ui.update_network_stm32.setText("네트워크 모듈 초기화")
 
-
     def update_network_module(self, module_id):
-        root_path = path.join(path.dirname(__file__), "..", "assets", "firmware", "latest","stm32")
+        root_path = path.join(path.dirname(__file__), "..", "assets", "firmware", "latest", "stm32")
         bin_path = path.join(root_path, "network.bin")
         with open(bin_path, "rb") as bin_file:
             bin_buffer = bin_file.read()
 
         # Init metadata of the bytes loaded
-        page_retry_count = 0
-        page_retry_max_count = 20
         page_size = 0x800
         flash_memory_addr = 0x08000000
 
@@ -449,7 +448,7 @@ class NetworkFirmwareUpdater(ModiSerialPort):
         erase_error_count = 0
         crc_error_limit = 2
         crc_error_count = 0
-        while page_begin < bin_end :
+        while page_begin < bin_end:
             progress = 100 * page_begin // bin_end
             self.progress = progress
 
@@ -475,12 +474,12 @@ class NetworkFirmwareUpdater(ModiSerialPort):
                 page_begin = page_begin + page_size
                 time.sleep(0.02)
                 continue
-            
+
             erase_page_success = self.set_firmware_command(
-                oper_type = "erase",
-                module_id = module_id,
-                crc_val = 0,
-                page_addr = flash_memory_addr + page_begin + page_offset
+                oper_type="erase",
+                module_id=module_id,
+                crc_val=0,
+                page_addr=flash_memory_addr + page_begin + page_offset
             )
 
             if not erase_page_success:
@@ -499,16 +498,16 @@ class NetworkFirmwareUpdater(ModiSerialPort):
                 if page_begin + curr_ptr >= bin_size:
                     break
 
-                curr_data = curr_page[curr_ptr : curr_ptr + 8]
+                curr_data = curr_page[curr_ptr:curr_ptr + 8]
                 checksum = self.set_firmware_data(module_id, curr_ptr // 8, curr_data, checksum)
-                self.thread_event.wait(0.001)
+                self.__delay(0.001)
 
             # CRC on current page (send CRC request / receive CRC response)
             crc_page_success = self.set_firmware_command(
-                oper_type = "crc",
-                module_id = module_id,
-                crc_val = checksum,
-                page_addr = flash_memory_addr + page_begin + page_offset
+                oper_type="crc",
+                module_id=module_id,
+                crc_val=checksum,
+                page_addr=flash_memory_addr + page_begin + page_offset
             )
 
             if crc_page_success:
@@ -639,6 +638,23 @@ class NetworkFirmwareUpdater(ModiSerialPort):
         checksum = self.calc_crc32(data[4:], checksum)
         return checksum
 
+    def __delay(self, span):
+        if self.__delay_flag == 0:
+            start_time = time.time()
+            self.thread_event.wait(span)
+            check = time.time() - start_time
+            import math
+            if math.fabs(check - span) > 0.005:
+                self.__delay_flag = 1
+            else:
+                self.__delay_flag = 2
+        elif self.__delay_flag == 1:
+            init_time = time.perf_counter()
+            while time.perf_counter() - init_time < span:
+                pass
+        elif self.__delay_flag == 2:
+            self.thread_event.wait(span)
+
     def __progress_bar(self, current, total):
         curr_bar = 50 * current // total
         rest_bar = 50 - curr_bar
@@ -647,6 +663,7 @@ class NetworkFirmwareUpdater(ModiSerialPort):
     def __print(self, data, end="\n"):
         if self.print:
             print(data, end)
+
 
 class NetworkFirmwareMultiUpdater():
     def __init__(self):
@@ -672,7 +689,7 @@ class NetworkFirmwareMultiUpdater():
                 network_updater = NetworkFirmwareUpdater(modi_port)
                 network_updater.set_print(False)
                 network_updater.set_raise_error(False)
-            except:
+            except Exception:
                 print("open " + modi_port + " error")
             else:
                 self.network_updaters.append(network_updater)
