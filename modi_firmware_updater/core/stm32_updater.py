@@ -69,15 +69,15 @@ class STM32FirmwareUpdater(ModiSerialPort):
         self.has_update_error = False
         self.this_update_error = False
 
-        if device != None:
-            super().__init__(device, baudrate = 921600, timeout = 0.1, write_timeout = 0)
+        if device is not None:
+            super().__init__(device, baudrate=921600, timeout=0.1, write_timeout=0)
         else:
             modi_ports = list_modi_serialports()
             if not modi_ports:
                 raise SerialException("No MODI port is connected")
             for modi_port in modi_ports:
                 try:
-                    super().__init__(modi_port, baudrate = 921600, timeout = 0.1, write_timeout = 0)
+                    super().__init__(modi_port, baudrate=921600, timeout=0.1, write_timeout=0)
                 except Exception:
                     self.__print('Next network module')
                     continue
@@ -100,7 +100,7 @@ class STM32FirmwareUpdater(ModiSerialPort):
             time.sleep(timeout_delay)
             timeout_count += timeout_delay
 
-            if self.update_in_progress == False:
+            if not self.update_in_progress:
                 # 장치 연결까지 대기
                 continue
 
@@ -227,7 +227,7 @@ class STM32FirmwareUpdater(ModiSerialPort):
                 modules_update_all_flag = False
                 break
 
-        if modules_update_all_flag == True:
+        if modules_update_all_flag:
             module_elem = module_id, module_type
             self.modules_to_update_all.append(module_elem)
 
@@ -262,7 +262,7 @@ class STM32FirmwareUpdater(ModiSerialPort):
             self.module_type = module_type
 
             # Init base root_path, utilizing local binary files
-            root_path = path.join(path.dirname(__file__), "..", "assets", "firmware", "latest","stm32")
+            root_path = path.join(path.dirname(__file__), "..", "assets", "firmware", "latest", "stm32")
             bin_path = path.join(root_path, f"{module_type.lower()}.bin")
 
             with open(bin_path, "rb") as bin_file:
@@ -286,7 +286,7 @@ class STM32FirmwareUpdater(ModiSerialPort):
             erase_error_count = 0
             crc_error_limit = 2
             crc_error_count = 0
-            while page_begin < bin_end :
+            while page_begin < bin_end:
                 progress = 100 * page_begin // bin_end
                 self.progress = progress
 
@@ -345,7 +345,7 @@ class STM32FirmwareUpdater(ModiSerialPort):
                     if page_begin + curr_ptr >= bin_size:
                         break
 
-                    curr_data = curr_page[curr_ptr : curr_ptr + 8]
+                    curr_data = curr_page[curr_ptr:curr_ptr + 8]
                     checksum = self.send_firmware_data(
                         module_id,
                         seq_num=curr_ptr // 8,
@@ -404,7 +404,7 @@ class STM32FirmwareUpdater(ModiSerialPort):
             end_flash_data[0] = verify_header
             end_flash_data[6] = version & 0xFF
             end_flash_data[7] = (version >> 8) & 0xFF
-            
+
             success_end_flash = self.send_end_flash_data(module_type, module_id, end_flash_data)
             if not success_end_flash:
                 self.update_error_message = f"{module_type} ({module_id}) version writing failed."
@@ -546,7 +546,6 @@ class STM32FirmwareUpdater(ModiSerialPort):
 
         return json.dumps(message, separators=(",", ":"))
 
-
     def calc_crc32(self, data: bytes, crc: int) -> int:
         crc ^= int.from_bytes(data, byteorder="little", signed=False)
 
@@ -587,7 +586,8 @@ class STM32FirmwareUpdater(ModiSerialPort):
         response_delay: float = 0.01,
         response_timeout: float = 2,
         max_response_error_count: int = 10,
-        ) -> bool:
+    ) -> bool:
+
         # Receive firmware command response
         response_wait_time = 0
         while not self.response_flag:
@@ -673,7 +673,7 @@ class STM32FirmwareUpdater(ModiSerialPort):
                 return
             # print("recv", msg)
             ins, sid, did, data, length = decode_message(msg)
-        except:
+        except Exception:
             return
 
         command = {
@@ -721,6 +721,7 @@ class STM32FirmwareUpdater(ModiSerialPort):
         if self.print:
             print(data, end)
 
+
 class STM32FirmwareMultiUpdater():
     def __init__(self):
         self.update_in_progress = False
@@ -744,7 +745,7 @@ class STM32FirmwareMultiUpdater():
                 module_updater = STM32FirmwareUpdater(device=modi_port)
                 module_updater.set_print(False)
                 module_updater.set_raise_error(False)
-            except:
+            except Exception:
                 print("open " + modi_port + " error")
             else:
                 self.module_updaters.append(module_updater)
@@ -800,7 +801,7 @@ class STM32FirmwareMultiUpdater():
                         current_module_progress = 0
                         total_module_progress = 0
 
-                        if module_updater.progress != None and len(module_updater.modules_to_update_all) != 0:
+                        if module_updater.progress is not None and len(module_updater.modules_to_update_all) != 0:
                             current_module_progress = module_updater.progress
                             if len(module_updater.modules_updated) == len(module_updater.modules_to_update_all):
                                 total_module_progress = 100

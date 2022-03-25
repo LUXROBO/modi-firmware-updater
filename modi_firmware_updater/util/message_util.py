@@ -36,12 +36,12 @@ def __encode_bytes(byte_data: Tuple):
             idx += 1
         elif byte_data[idx] > 256:
             length = __extract_length(idx, byte_data)
-            data[idx : idx + length] = int.to_bytes(
+            data[idx:idx + length] = int.to_bytes(
                 byte_data[idx], byteorder="little", length=length, signed=True
             )
             idx += length
         elif byte_data[idx] < 0:
-            data[idx : idx + 4] = int.to_bytes(
+            data[idx:idx + 4] = int.to_bytes(
                 int(byte_data[idx]), byteorder="little", length=4, signed=True
             )
             idx += 4
@@ -67,7 +67,7 @@ def unpack_data(data: str, structure: Tuple = (1, 1, 1, 1, 1, 1, 1, 1)):
     result = []
     for size in structure:
         result.append(
-            int.from_bytes(data[idx : idx + size], byteorder="little")
+            int.from_bytes(data[idx:idx + size], byteorder="little")
         )
         idx += size
     return result

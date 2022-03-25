@@ -227,7 +227,7 @@ class Form(QDialog):
         self.local_network_version_path = path.join(self.local_network_firmware_path, "base_version.txt")
         self.latest_network_firmware_path = "https://download.luxrobo.com/modi-network-os/network.zip"
         self.latest_network_version_path = "https://download.luxrobo.com/modi-network-os/version.txt"
-        #esp32
+        # esp32
         self.local_esp32_firmware_path = path.join(self.local_firmware_path, "esp32")
         self.local_esp32_version_path = path.join(self.local_esp32_firmware_path, "esp_version.txt")
         self.latest_esp32_firmware_path = [
@@ -472,12 +472,12 @@ class Form(QDialog):
                 for i, module in enumerate(module_name):
                     src_path = module + "/Base_module.bin"
                     bin_buffer = zip_content.read(src_path)
-                    
+
                     if module == "environment":
                         dest_path = path.join(self.local_module_firmware_path, "env" + ".bin")
                     else:
                         dest_path = path.join(self.local_module_firmware_path, module + ".bin")
-                    
+
                     with open(dest_path, "wb") as data_file:
                         data_file.write(bin_buffer)
 
@@ -568,7 +568,7 @@ class Form(QDialog):
             else:
                 os.mkdir(self.local_module_firmware_path)
 
-            if (local_version_info == None) or (local_version_info != latest_version_info):
+            if (local_version_info is None) or (local_version_info != latest_version_info):
                 self.__download_module_firmware()
 
         except URLError:
@@ -591,7 +591,7 @@ class Form(QDialog):
             else:
                 os.mkdir(self.local_network_firmware_path)
 
-            if (local_version_info == None) or (local_version_info != latest_version_info):
+            if (local_version_info is None) or (local_version_info != latest_version_info):
                 self.__download_network_firmware()
 
         except URLError:
@@ -614,16 +614,15 @@ class Form(QDialog):
             else:
                 os.mkdir(self.local_esp32_firmware_path)
 
-            if (local_version_info == None) or (local_version_info != latest_version_info):
+            if (local_version_info is None) or (local_version_info != latest_version_info):
                 self.__download_esp32_firmware()
 
         except URLError:
             if not os.path.exists(self.local_esp32_firmware_path):
                 assert_path = path.join(path.dirname(__file__), "assets", "firmware", "esp32")
                 shutil.copytree(assert_path, self.local_esp32_firmware_path)
-    #
+
     # Helper functions
-    #
     def __popup_excepthook(self, exctype, value, traceback):
         self.__excepthook(exctype, value, traceback)
         if self.is_popup:
@@ -678,6 +677,7 @@ class Form(QDialog):
     @staticmethod
     def __is_update_progress_line(line):
         return line.startswith("\r")
+
 
 class ESP32UpdateListForm(QDialog):
     network_state_signal = pyqtSignal(int, int)
@@ -760,7 +760,7 @@ class ESP32UpdateListForm(QDialog):
         ]
 
         self.ui.close_button.clicked.connect(self.ui.close)
-        
+
         self.network_state_signal.connect(self.set_network_state)
         self.network_uuid_signal.connect(self.set_network_uuid)
         self.progress_signal.connect(self.progress_value_changed)
@@ -970,7 +970,7 @@ class STM32UpdateListForm(QDialog):
         self.total_progress_signal.connect(self.total_progress_value_changed)
         self.total_status_signal.connect(self.total_progress_status_changed)
         self.error_message_signal.connect(self.set_error_message)
-        
+
         self.device_num = 0
         self.device_max_num = 10
 
@@ -1052,7 +1052,6 @@ class STM32UpdateListForm(QDialog):
         self.ui_total_progress_list[index].setValue(total)
         self.ui_total_progress_list[index].repaint()
         self.ui_total_progress_value_list[index].setText(str(total) + "%")
-
 
     def total_progress_value_changed(self, value):
         self.ui.progress_bar_total.setValue(value)

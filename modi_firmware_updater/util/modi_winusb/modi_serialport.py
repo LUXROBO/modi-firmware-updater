@@ -23,11 +23,12 @@ def list_modi_serialports():
 
     return info_list
 
+
 class ModiSerialPort():
     SERIAL_MODE_COMPORT = 1
     SERIAL_MODI_WINUSB = 2
 
-    def __init__(self, port = None, baudrate = 921600, timeout = 0.2, write_timeout = None):
+    def __init__(self, port=None, baudrate=921600, timeout=0.2, write_timeout=None):
         self.type = self.SERIAL_MODE_COMPORT
         self._port = port
         self._baudrate = baudrate
@@ -48,13 +49,13 @@ class ModiSerialPort():
                 ModiWinUsbComPort, list_modi_winusb_paths)
             if port in list_modi_winusb_paths():
                 self.type = self.SERIAL_MODI_WINUSB
-                winusb = ModiWinUsbComPort(path = self._port, baudrate=self._baudrate, timeout=self._timeout)
+                winusb = ModiWinUsbComPort(path=self._port, baudrate=self._baudrate, timeout=self._timeout)
                 self.serial_port = winusb
             else:
-                ser = serial.Serial(port = self._port, baudrate=self._baudrate, timeout=self._timeout, write_timeout=self._write_timeout, exclusive=True)
+                ser = serial.Serial(port=self._port, baudrate=self._baudrate, timeout=self._timeout, write_timeout=self._write_timeout, exclusive=True)
                 self.serial_port = ser
         else:
-            ser = serial.Serial(port = self._port, baudrate=self._baudrate, timeout=self._timeout, write_timeout=self._write_timeout, exclusive=True)
+            ser = serial.Serial(port=self._port, baudrate=self._baudrate, timeout=self._timeout, write_timeout=self._write_timeout, exclusive=True)
             self.serial_port = ser
 
         self.is_open = True
@@ -73,7 +74,7 @@ class ModiSerialPort():
     def read(self, size=1):
         if not self.is_open:
             raise Exception("serialport is not opened")
-        if size == None and self.type == self.SERIAL_MODE_COMPORT:
+        if size is None and self.type == self.SERIAL_MODE_COMPORT:
             size = 1
         return self.serial_port.read(size)
 
@@ -238,6 +239,7 @@ class ModiSerialPort():
             self.duration = duration
             self.target_time = self.TIME() + duration
 
+
 # main
 if __name__ == "__main__":
     stop = False
@@ -249,7 +251,7 @@ if __name__ == "__main__":
             init = time.time()
             recv = serialport.read_until(b"}")
             dt = time.time() - init
-            if recv == None:
+            if recv is None:
                 print("disconnected")
                 stop = True
                 break
