@@ -1,13 +1,11 @@
 import os
 import sys
 import time
-
+from getopt import GetoptError, getopt
 from textwrap import dedent
 
-from getopt import getopt, GetoptError
-
-from modi_firmware_updater.core.stm32_updater import STM32FirmwareUpdater
 from modi_firmware_updater.core.esp32_updater import ESP32FirmwareUpdater
+from modi_firmware_updater.core.stm32_updater import STM32FirmwareUpdater
 
 
 def check_option(*options):

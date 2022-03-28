@@ -1,26 +1,27 @@
-import logging
+import io
 import os
 import pathlib
+import shutil
 import sys
 import threading as th
 import time
 import traceback as tb
-import io
 import urllib.request as ur
 import zipfile
-import shutil
 from io import open
 from os import path
 from urllib.error import URLError
 
-from PyQt5 import QtCore, QtGui, QtWidgets, uic
+from PyQt5 import QtGui, QtWidgets, uic
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QDialog
 
-from modi_firmware_updater.util.connection_util import list_modi_ports
-from modi_firmware_updater.core.esp32_updater import ESP32FirmwareUpdater
-from modi_firmware_updater.core.stm32_updater import STM32FirmwareUpdater
-from modi_firmware_updater.core.stm32_network_updater import NetworkFirmwareUpdater
+from modi_firmware_updater.core.esp32_updater import ESP32FirmwareMultiUpdater
+from modi_firmware_updater.core.stm32_network_updater import \
+    NetworkFirmwareMultiUpdater
+from modi_firmware_updater.core.stm32_updater import STM32FirmwareMultiUpdater
+from modi_firmware_updater.util.modi_winusb.modi_serialport import \
+    list_modi_serialports
 
 
 class StdoutRedirect(QObject):
@@ -31,7 +32,6 @@ class StdoutRedirect(QObject):
         self.daemon = True
         self.sysstdout = sys.stdout.write
         self.sysstderr = sys.stderr.write
-        self.logger = None
 
     def stop(self):
         sys.stdout.write = self.sysstdout
@@ -44,16 +44,6 @@ class StdoutRedirect(QObject):
     def write(self, s, color="black"):
         sys.stdout.flush()
         self.printOccur.emit(s, color)
-        if self.logger and not self.__is_redundant_line(s):
-            self.logger.info(s)
-
-    @staticmethod
-    def __is_redundant_line(line):
-        return (
-            line.startswith("\rUpdating") or
-            line.startswith("\rFirmware Upload: [") or
-            len(line) < 3
-        )
 
 
 class PopupMessageBox(QtWidgets.QMessageBox):
@@ -81,8 +71,6 @@ class PopupMessageBox(QtWidgets.QMessageBox):
 
         close_btn = self.addButton("Exit", self.ActionRole)
         close_btn.clicked.connect(self.close_btn)
-        # report_btn = self.addButton('Report Error', self.ActionRole)
-        # report_btn.clicked.connect(self.report_btn)
         self.show()
 
     def event(self, e):
@@ -116,15 +104,6 @@ class PopupMessageBox(QtWidgets.QMessageBox):
     def close_btn(self):
         self.window.close()
 
-    def report_btn(self):
-        pass
-    # def restart_btn(self):
-    #     self.window.stream.thread_signal.connect(self.restart_update)
-    #     self.window.stream.thread_signal.emit(True)
-    # @pyqtSlot(object)
-    # def restart_update(self, click):
-    #     self.window.update_network_stm32.clicked(click)
-
 
 class ThreadSignal(QObject):
     thread_error = pyqtSignal(object)
@@ -141,7 +120,6 @@ class Form(QDialog):
 
     def __init__(self, installer=False):
         QDialog.__init__(self)
-        self.logger = self.__init_logger()
         self.__excepthook = sys.excepthook
         sys.excepthook = self.__popup_excepthook
         th.excepthook = self.__popup_thread_excepthook
@@ -177,14 +155,14 @@ class Form(QDialog):
         self.language_frame_path = pathlib.PurePosixPath(self.component_path, "lang_frame.png")
         self.language_frame_pressed_path = pathlib.PurePosixPath(self.component_path, "lang_frame_pressed.png")
 
-        self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.active_path}); font-size: 16px")
-        self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.active_path}); font-size: 16px")
-        self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.active_path}); font-size: 16px")
-        self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.active_path}); font-size: 16px")
-        self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.active_path}); font-size: 16px")
-        self.ui.translate_button.setStyleSheet(f"border-image: url({self.language_frame_path}); font-size: 13px")
-        self.ui.devmode_button.setStyleSheet(f"border-image: url({self.language_frame_path}); font-size: 13px")
-        self.ui.console.setStyleSheet("font-size: 10px")
+        self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.active_path}); font-size: 16px; color: black;")
+        self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.active_path}); font-size: 16px; color: black;")
+        self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.active_path}); font-size: 16px; color: black;")
+        self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.active_path}); font-size: 16px; color: black;")
+        self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.active_path}); font-size: 16px; color: black;")
+        self.ui.translate_button.setStyleSheet(f"border-image: url({self.language_frame_path}); font-size: 13px; color: black;")
+        self.ui.devmode_button.setStyleSheet(f"border-image: url({self.language_frame_path}); font-size: 13px; color: black;")
+        self.ui.console.setStyleSheet("font-size: 10px; color: black;")
 
         self.ui.setWindowTitle("MODI Firmware Updater")
         self.ui.setWindowIcon(QtGui.QIcon(os.path.join(self.component_path, "network_module.ico")))
@@ -192,10 +170,7 @@ class Form(QDialog):
         # Redirect stdout to text browser (i.e. console in our UI)
         self.stdout = StdoutRedirect()
         self.stdout.start()
-        self.stdout.printOccur.connect(
-            lambda line: self.__append_text_line(line)
-        )
-        self.stdout.logger = self.logger
+        self.stdout.printOccur.connect(lambda line: self.__append_text_line(line))
 
         # Set signal for thread communication
         self.stream = ThreadSignal()
@@ -239,7 +214,6 @@ class Form(QDialog):
         self.ui.language_frame_path = self.language_frame_path
         self.ui.language_frame_pressed_path = self.language_frame_pressed_path
         self.ui.stream = self.stream
-        self.ui.popup = self._thread_signal_hook
 
         # Check module firmware
         self.local_firmware_path = path.join(path.dirname(__file__), "assets", "firmware", "latest")
@@ -253,7 +227,7 @@ class Form(QDialog):
         self.local_network_version_path = path.join(self.local_network_firmware_path, "base_version.txt")
         self.latest_network_firmware_path = "https://download.luxrobo.com/modi-network-os/network.zip"
         self.latest_network_version_path = "https://download.luxrobo.com/modi-network-os/version.txt"
-        #esp32
+        # esp32
         self.local_esp32_firmware_path = path.join(self.local_firmware_path, "esp32")
         self.local_esp32_version_path = path.join(self.local_esp32_firmware_path, "esp_version.txt")
         self.latest_esp32_firmware_path = [
@@ -278,139 +252,148 @@ class Form(QDialog):
         if self.firmware_updater and self.firmware_updater.update_in_progress:
             # self.esp32_update_list_form.ui.show()
             return
-        self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.pressed_path}); font-size: 16px")
+        self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.pressed_path}); font-size: 16px; color: black;")
         self.ui.console.clear()
         print("ESP32 Firmware Updater has been initialized for esp update!")
         th.Thread(
             target=self.__click_motion, args=(0, button_start), daemon=True
         ).start()
 
-        modi_ports = list_modi_ports()
+        modi_ports = list_modi_serialports()
         if not modi_ports:
             raise Exception("No MODI port is connected")
 
-        esp32_updater = ESP32FirmwareUpdater()
-        esp32_updater.set_ui(self.ui)
+        def run_task(self, modi_ports):
+            self.firmware_updater = ESP32FirmwareMultiUpdater()
+            self.firmware_updater.set_ui(self.ui, None)
+            self.firmware_updater.update_firmware([modi_ports[0]], False)
+
         th.Thread(
-            target=esp32_updater.update_firmware,
-            args=(False,),
+            target=run_task,
+            args=(self, modi_ports),
             daemon=True
         ).start()
-        self.firmware_updater = esp32_updater
 
     def update_network_esp32_interpreter(self):
         button_start = time.time()
         if self.firmware_updater and self.firmware_updater.update_in_progress:
             # self.esp32_update_list_form.ui.show()
             return
-        self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.pressed_path}); font-size: 16px")
+        self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.pressed_path}); font-size: 16px; color: black;")
         self.ui.console.clear()
         print("ESP32 Firmware Updater has been initialized for esp interpreter update!")
         th.Thread(
             target=self.__click_motion, args=(1, button_start), daemon=True
         ).start()
 
-        modi_ports = list_modi_ports()
+        modi_ports = list_modi_serialports()
         if not modi_ports:
             raise Exception("No MODI port is connected")
 
         # self.esp32_update_list_form.reset_device_list()
         # self.esp32_update_list_form.ui.show()
-        esp32_updater = ESP32FirmwareUpdater()
-        esp32_updater.set_ui(self.ui)
+
+        def run_task(self, modi_ports):
+            self.firmware_updater = ESP32FirmwareMultiUpdater()
+            self.firmware_updater.set_ui(self.ui, None)
+            self.firmware_updater.update_firmware([modi_ports[0]], True)
+
         th.Thread(
-            target=esp32_updater.update_firmware,
-            args=(modi_ports, True,),
+            target=run_task,
+            args=(self, modi_ports),
             daemon=True
         ).start()
-        self.firmware_updater = esp32_updater
 
     def update_stm32_modules(self):
         button_start = time.time()
         if self.firmware_updater and self.firmware_updater.update_in_progress:
             # self.stm32_update_list_form.ui.show()
             return
-        self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.pressed_path}); font-size: 16px")
+        self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.pressed_path}); font-size: 16px; color: black;")
         self.ui.console.clear()
         print("STM32 Firmware Updater has been initialized for module update!")
         th.Thread(
             target=self.__click_motion, args=(2, button_start), daemon=True
         ).start()
 
-        modi_ports = list_modi_ports()
+        modi_ports = list_modi_serialports()
         if not modi_ports:
             raise Exception("No MODI port is connected")
 
         # self.stm32_update_list_form.reset_device_list()
         # self.stm32_update_list_form.ui.show()
-        stm32_updater = STM32FirmwareUpdater(port = modi_ports[0].device)
-        # stm32_updater.set_print(False)
-        stm32_updater.set_raise_error(False)
-        stm32_updater.set_ui(self.ui)
+        def run_task(self, modi_ports):
+            self.firmware_updater = STM32FirmwareMultiUpdater()
+            self.firmware_updater.set_ui(self.ui, None)
+            self.firmware_updater.update_module_firmware([modi_ports[0]])
+
         th.Thread(
-            target=stm32_updater.update_module_firmware,
-            # args=(modi_ports, ),
-            daemon=True,
+            target=run_task,
+            args=(self, modi_ports),
+            daemon=True
         ).start()
-        self.firmware_updater = stm32_updater
 
     def update_network_stm32(self):
         button_start = time.time()
         if self.firmware_updater and self.firmware_updater.update_in_progress:
             # self.stm32_update_list_form.ui.show()
             return
-        self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.pressed_path}); font-size: 16px")
+        self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.pressed_path}); font-size: 16px; color: black;")
         self.ui.console.clear()
         print("STM32 Firmware Updater has been initialized for base update!")
         th.Thread(
             target=self.__click_motion, args=(3, button_start), daemon=True
         ).start()
 
-        modi_ports = list_modi_ports()
+        modi_ports = list_modi_serialports()
         if not modi_ports:
             raise Exception("No MODI port is connected")
 
         # self.stm32_update_list_form.reset_device_list()
         # self.stm32_update_list_form.ui.show()
-        network_updater = NetworkFirmwareUpdater(modi_ports[0].device)
-        network_updater.set_ui(self.ui)
+        def run_task(self, modi_ports):
+            self.firmware_updater = NetworkFirmwareMultiUpdater()
+            self.firmware_updater.set_ui(self.ui, None)
+            self.firmware_updater.update_module_firmware([modi_ports[0]], False)
+
         th.Thread(
-            target=network_updater.update_module_firmware,
-            args=(False,),
-            daemon=True,
+            target=run_task,
+            args=(self, modi_ports),
+            daemon=True
         ).start()
-        self.firmware_updater = network_updater
 
     def update_network_bootloader_stm32(self):
         button_start = time.time()
         if self.firmware_updater and self.firmware_updater.update_in_progress:
             # self.stm32_update_list_form.ui.show()
             return
-        self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.pressed_path}); font-size: 16px")
+        self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.pressed_path}); font-size: 16px; color: black;")
         self.ui.console.clear()
         print("STM32 Firmware Updater has been initialized for base update!")
         th.Thread(
             target=self.__click_motion, args=(4, button_start), daemon=True
         ).start()
 
-        modi_ports = list_modi_ports()
+        modi_ports = list_modi_serialports()
         if not modi_ports:
             raise Exception("No MODI port is connected")
 
         # self.stm32_update_list_form.reset_device_list()
         # self.stm32_update_list_form.ui.show()
-        network_updater = NetworkFirmwareUpdater()
-        network_updater.set_ui(self.ui)
+        def run_task(self, modi_ports):
+            self.firmware_updater = NetworkFirmwareMultiUpdater()
+            self.firmware_updater.set_ui(self.ui, None)
+            self.firmware_updater.update_module_firmware([modi_ports[0]], True)
+
         th.Thread(
-            target=network_updater.update_module_firmware,
-            args=(True,),
-            daemon=True,
+            target=run_task,
+            args=(self, modi_ports),
+            daemon=True
         ).start()
-        self.firmware_updater = network_updater
 
     def dev_mode_button(self):
         button_start = time.time()
-        self.ui.devmode_button.setStyleSheet(f"border-image: url({self.language_frame_pressed_path});font-size: 13px")
+        self.ui.devmode_button.setStyleSheet(f"border-image: url({self.language_frame_pressed_path});font-size: 13px; color: black;")
         th.Thread(
             target=self.__click_motion, args=(5, button_start), daemon=True
         ).start()
@@ -424,7 +407,7 @@ class Form(QDialog):
 
     def translate_button_text(self):
         button_start = time.time()
-        self.ui.translate_button.setStyleSheet(f"border-image: url({self.language_frame_pressed_path}); font-size: 13px")
+        self.ui.translate_button.setStyleSheet(f"border-image: url({self.language_frame_pressed_path}); font-size: 13px; color: black;")
         th.Thread(
             target=self.__click_motion, args=(6, button_start), daemon=True
         ).start()
@@ -489,12 +472,12 @@ class Form(QDialog):
                 for i, module in enumerate(module_name):
                     src_path = module + "/Base_module.bin"
                     bin_buffer = zip_content.read(src_path)
-                    
+
                     if module == "environment":
                         dest_path = path.join(self.local_module_firmware_path, "env" + ".bin")
                     else:
                         dest_path = path.join(self.local_module_firmware_path, module + ".bin")
-                    
+
                     with open(dest_path, "wb") as data_file:
                         data_file.write(bin_buffer)
 
@@ -585,7 +568,7 @@ class Form(QDialog):
             else:
                 os.mkdir(self.local_module_firmware_path)
 
-            if (local_version_info == None) or (local_version_info != latest_version_info):
+            if (local_version_info is None) or (local_version_info != latest_version_info):
                 self.__download_module_firmware()
 
         except URLError:
@@ -608,7 +591,7 @@ class Form(QDialog):
             else:
                 os.mkdir(self.local_network_firmware_path)
 
-            if (local_version_info == None) or (local_version_info != latest_version_info):
+            if (local_version_info is None) or (local_version_info != latest_version_info):
                 self.__download_network_firmware()
 
         except URLError:
@@ -631,28 +614,15 @@ class Form(QDialog):
             else:
                 os.mkdir(self.local_esp32_firmware_path)
 
-            if (local_version_info == None) or (local_version_info != latest_version_info):
+            if (local_version_info is None) or (local_version_info != latest_version_info):
                 self.__download_esp32_firmware()
 
         except URLError:
             if not os.path.exists(self.local_esp32_firmware_path):
                 assert_path = path.join(path.dirname(__file__), "assets", "firmware", "esp32")
                 shutil.copytree(assert_path, self.local_esp32_firmware_path)
-    #
+
     # Helper functions
-    #
-    @staticmethod
-    def __init_logger():
-        logger = logging.getLogger("GUI MODI Firmware Updater Logger")
-        logger.setLevel(logging.DEBUG)
-
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-        file_handler = logging.FileHandler("gmfu.log")
-        file_handler.setLevel(logging.DEBUG)
-        file_handler.setFormatter(formatter)
-
-        return logger
-
     def __popup_excepthook(self, exctype, value, traceback):
         self.__excepthook(exctype, value, traceback)
         if self.is_popup:
@@ -675,44 +645,25 @@ class Form(QDialog):
             err_msg.exc_type, err_msg.exc_value, err_msg.exc_traceback
         )
 
-    @pyqtSlot(object)
-    def _thread_signal_hook(self):
-        self.thread_popup = PopupMessageBox(self.ui, level="warning")
-        if self.button_in_english:
-            text = (
-                "Reconnect network module and "
-                "click the button again please."
-            )
-        else:
-            text = "네트워크 모듈을 재연결 후 버튼을 다시 눌러주십시오."
-        self.thread_popup.setInformativeText(text)
-        self.is_popup = True
-
     def __click_motion(self, button_type, start_time):
         # Busy wait for 0.2 seconds
         while time.time() - start_time < 0.2:
             pass
 
         if button_type in [5, 6]:
-            self.buttons[button_type].setStyleSheet(f"border-image: url({self.language_frame_path}); font-size: 13px")
+            self.buttons[button_type].setStyleSheet(f"border-image: url({self.language_frame_path}); font-size: 13px; color: black;")
         else:
-            self.buttons[button_type].setStyleSheet(f"border-image: url({self.active_path}); font-size: 16px")
+            self.buttons[button_type].setStyleSheet(f"border-image: url({self.active_path}); font-size: 16px; color: black;")
             for i, q_button in enumerate(self.buttons):
                 if i in [button_type, 5, 6]:
                     continue
-                q_button.setStyleSheet(f"border-image: url({self.inactive_path}); font-size: 16px")
+                q_button.setStyleSheet(f"border-image: url({self.inactive_path}); font-size: 16px; color: black;")
                 q_button.setEnabled(False)
 
     def __append_text_line(self, line):
-        self.ui.console.moveCursor(
-            QtGui.QTextCursor.End, QtGui.QTextCursor.MoveAnchor
-        )
-        self.ui.console.moveCursor(
-            QtGui.QTextCursor.StartOfLine, QtGui.QTextCursor.MoveAnchor
-        )
-        self.ui.console.moveCursor(
-            QtGui.QTextCursor.End, QtGui.QTextCursor.KeepAnchor
-        )
+        self.ui.console.moveCursor(QtGui.QTextCursor.End, QtGui.QTextCursor.MoveAnchor)
+        self.ui.console.moveCursor(QtGui.QTextCursor.StartOfLine, QtGui.QTextCursor.MoveAnchor)
+        self.ui.console.moveCursor(QtGui.QTextCursor.End, QtGui.QTextCursor.KeepAnchor)
 
         # Remove new line character if current line represents update_progress
         if self.__is_update_progress_line(line):
@@ -722,13 +673,11 @@ class Form(QDialog):
         # Display user text input
         self.ui.console.moveCursor(QtGui.QTextCursor.End)
         self.ui.console.insertPlainText(line)
-        # QtWidgets.QApplication.processEvents(
-        #     QtCore.QEventLoop.ExcludeUserInputEvents
-        # )
 
     @staticmethod
     def __is_update_progress_line(line):
-        return line.startswith("\rUpdating") or line.startswith("\rFirmware Upload: [")
+        return line.startswith("\r")
+
 
 class ESP32UpdateListForm(QDialog):
     network_state_signal = pyqtSignal(int, int)
@@ -811,7 +760,7 @@ class ESP32UpdateListForm(QDialog):
         ]
 
         self.ui.close_button.clicked.connect(self.ui.close)
-        
+
         self.network_state_signal.connect(self.set_network_state)
         self.network_uuid_signal.connect(self.set_network_uuid)
         self.progress_signal.connect(self.progress_value_changed)
@@ -1021,7 +970,7 @@ class STM32UpdateListForm(QDialog):
         self.total_progress_signal.connect(self.total_progress_value_changed)
         self.total_status_signal.connect(self.total_progress_status_changed)
         self.error_message_signal.connect(self.set_error_message)
-        
+
         self.device_num = 0
         self.device_max_num = 10
 
@@ -1103,7 +1052,6 @@ class STM32UpdateListForm(QDialog):
         self.ui_total_progress_list[index].setValue(total)
         self.ui_total_progress_list[index].repaint()
         self.ui_total_progress_value_list[index].setText(str(total) + "%")
-
 
     def total_progress_value_changed(self, value):
         self.ui.progress_bar_total.setValue(value)

@@ -1,4 +1,3 @@
-import io
 import json
 import pathlib
 import sys
@@ -8,15 +7,11 @@ from base64 import b64decode, b64encode
 from io import open
 from os import path
 
-import serial
-import serial.tools.list_ports as stl
+from modi_firmware_updater.util.message_util import unpack_data
+from modi_firmware_updater.util.modi_winusb.modi_serialport import (
+    ModiSerialPort, list_modi_serialports)
+from modi_firmware_updater.util.module_util import get_module_type_from_uuid
 
-from modi_firmware_updater.util.connection_util import list_modi_ports
-from modi_firmware_updater.util.message_util import (decode_message,
-                                                     parse_message,
-                                                     unpack_data)
-from modi_firmware_updater.util.module_util import (Module,
-                                                    get_module_type_from_uuid)
 
 def retry(exception_to_catch):
     def decorator(func):
@@ -31,7 +26,7 @@ def retry(exception_to_catch):
     return decorator
 
 
-class ESP32FirmwareUpdater(serial.Serial):
+class ESP32FirmwareUpdater(ModiSerialPort):
     DEVICE_READY = 0x2B
     DEVICE_SYNC = 0x08
     SPI_ATTACH_REQ = 0xD
@@ -46,25 +41,21 @@ class ESP32FirmwareUpdater(serial.Serial):
 
     def __init__(self, device=None):
         self.print = True
-        if device != None:
-            super().__init__(
-                device, timeout = 0.1, baudrate = 921600
-            )
+        if device is not None:
+            super().__init__(device, baudrate=921600, timeout=0.1)
         else:
-            modi_ports = list_modi_ports()
+            modi_ports = list_modi_serialports()
             if not modi_ports:
-                raise serial.SerialException("No MODI port is connected")
+                raise Exception("No MODI port is connected")
             for modi_port in modi_ports:
                 try:
-                    super().__init__(
-                        modi_port.device, timeout=0.1, baudrate=921600
-                    )
+                    super().__init__(modi_port, baudrate=921600, timeout=0.1)
                 except Exception:
                     self.__print('Next network module')
                     continue
                 else:
                     break
-            self.__print(f"Connecting to MODI network module at {modi_port.device}")
+            self.__print(f"Connecting to MODI network module at {modi_port}")
 
         self.__address = [0x1000, 0x8000, 0xD000, 0x10000, 0xD0000]
         self.file_path = [
@@ -101,18 +92,54 @@ class ESP32FirmwareUpdater(serial.Serial):
     def update_firmware(self, update_interpreter=False, force=False):
         if update_interpreter:
             self.current_sequence = 0
-            self.total_sequence = 1
+            self.total_sequence = 100
+            self.update_in_progress = True
+
             self.__print("get network uuid")
             self.network_uuid = self.get_network_uuid()
 
+            time.sleep(1)
             self.__print("Reset interpreter...")
-            self.update_in_progress = True
 
-            self.write(b'{"c":160,"s":0,"d":18,"b":"AAMAAAAA","l":6}')
+            init_time = time.time()
+            while True:
+                self.write(b'{"c":160,"s":0,"d":18,"b":"AAMAAAAA","l":6}')
+                self.current_sequence = self.current_sequence + 5
+                if self.current_sequence > 90:
+                    self.current_sequence = 90
+
+                try:
+                    msg = self.__wait_for_json()
+                    if not msg:
+                        break
+
+                    json_msg = json.loads(msg)
+                    if json_msg["c"] == 0xA1:
+                        break
+                except json.decoder.JSONDecodeError as jde:
+                    self.__print("json parse error: " + str(jde))
+                    break
+                except Exception as e:
+                    self.__print("error: " + str(e))
+                    break
+
+                if time.time() - init_time > 5:
+                    break
+
+                time.sleep(0.1)
+
             self.__print("ESP interpreter reset is complete!!")
 
-            self.current_sequence = 1
-            self.total_sequence = 1
+            init_count = self.current_sequence
+            for _ in range(init_count, 100):
+                self.current_sequence = self.current_sequence + 5
+                if self.current_sequence > 100:
+                    self.current_sequence = 100
+                    break
+                time.sleep(0.05)
+
+            self.current_sequence = 100
+            self.total_sequence = 100
 
             time.sleep(1)
             self.update_in_progress = False
@@ -122,13 +149,13 @@ class ESP32FirmwareUpdater(serial.Serial):
             self.update_error = 1
 
             if self.ui:
-                self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_stm32_modules.setEnabled(True)
-                self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_stm32.setEnabled(True)
-                self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_esp32.setEnabled(True)
-                self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_stm32_bootloader.setEnabled(True)
                 if self.ui.is_english:
                     self.ui.update_network_esp32_interpreter.setText("Update Network ESP32 Interpreter")
@@ -184,13 +211,13 @@ class ESP32FirmwareUpdater(serial.Serial):
             self.update_error = 1
 
             if self.ui:
-                self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_stm32_modules.setEnabled(True)
-                self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_stm32.setEnabled(True)
-                self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_esp32_interpreter.setEnabled(True)
-                self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_stm32_bootloader.setEnabled(True)
                 if self.ui.is_english:
                     self.ui.update_network_esp32.setText("Update Network ESP32")
@@ -271,7 +298,6 @@ class ESP32FirmwareUpdater(serial.Serial):
     @retry(Exception)
     def __send_pkt(self, pkt, wait=True, timeout=None, continuous=False):
         self.write(pkt)
-        self.reset_input_buffer()
         if wait:
             cmd = bytearray(pkt)[2]
             init_time = time.time()
@@ -337,7 +363,12 @@ class ESP32FirmwareUpdater(serial.Serial):
             self.write(get_version_pkt)
 
             try:
-                json_msg = json.loads(self.__wait_for_json())
+                msg = self.__wait_for_json()
+                if not msg:
+                    time.sleep(0.2)
+                    continue
+
+                json_msg = json.loads(msg)
                 if json_msg["c"] == 0xA1:
                     break
             except json.decoder.JSONDecodeError as jde:
@@ -362,7 +393,12 @@ class ESP32FirmwareUpdater(serial.Serial):
         while True:
             self.write(version_msg_enc)
             try:
-                json_msg = json.loads(self.__wait_for_json())
+                msg = self.__wait_for_json()
+                if not msg:
+                    time.sleep(0.2)
+                    continue
+
+                json_msg = json.loads(msg)
                 if json_msg["c"] == 0xA1:
                     break
                 self.__boot_to_app()
@@ -378,7 +414,7 @@ class ESP32FirmwareUpdater(serial.Serial):
         for i, bin_path in enumerate(self.file_path):
             if self.ui:
                 if sys.platform.startswith("win"):
-                    root_path = pathlib.PurePosixPath(pathlib.PurePath(__file__),"..", "..", "assets", "firmware", "latest", "esp32")
+                    root_path = pathlib.PurePosixPath(pathlib.PurePath(__file__), "..", "..", "assets", "firmware", "latest", "esp32")
                 else:
                     root_path = path.join(path.dirname(__file__), "..", "assets", "firmware", "latest", "esp32")
 
@@ -439,7 +475,7 @@ class ESP32FirmwareUpdater(serial.Serial):
         while binary_firmware:
             if self.ESP_FLASH_CHUNK < len(binary_firmware):
                 chunk_queue.append(binary_firmware[: self.ESP_FLASH_CHUNK])
-                binary_firmware = binary_firmware[self.ESP_FLASH_CHUNK :]
+                binary_firmware = binary_firmware[self.ESP_FLASH_CHUNK:]
             else:
                 chunk_queue.append(binary_firmware[:])
                 binary_firmware = b""
@@ -459,7 +495,7 @@ class ESP32FirmwareUpdater(serial.Serial):
                 self.ui.update_network_esp32.setText("네트워크 모듈 업데이트가 진행중입니다. (99%)")
         self.current_sequence = 99
         self.total_sequence = 100
-        self.__print(f"\r{self.__progress_bar(99, 100)}")
+        self.__print(f"{self.__progress_bar(99, 100)}")
         self.__print("Firmware Upload Complete")
 
     def __write_chunk(self, chunk, curr_seq, total_seq, manager):
@@ -467,7 +503,7 @@ class ESP32FirmwareUpdater(serial.Serial):
         while chunk:
             if self.ESP_FLASH_BLOCK < len(chunk):
                 block_queue.append(chunk[: self.ESP_FLASH_BLOCK])
-                chunk = chunk[self.ESP_FLASH_BLOCK :]
+                chunk = chunk[self.ESP_FLASH_BLOCK:]
             else:
                 block_queue.append(chunk[:])
                 chunk = b""
@@ -481,7 +517,7 @@ class ESP32FirmwareUpdater(serial.Serial):
                 else:
                     self.ui.update_network_esp32.setText(f"네트워크 모듈 업데이트가 진행중입니다. ({int((curr_seq+seq)/total_seq*100)}%)")
             self.__print(
-                f"\r{self.__progress_bar(curr_seq + seq, total_seq)}", end=""
+                f"{self.__progress_bar(curr_seq + seq, total_seq)}", end=""
             )
             self.__write_flash_block(block, seq)
         return len(block_queue)
@@ -498,9 +534,10 @@ class ESP32FirmwareUpdater(serial.Serial):
         curr_bar = 50 * current // total
         rest_bar = 50 - curr_bar
         return (
-            f"Firmware Upload: [{'=' * curr_bar}>{'.' * rest_bar}] "
+            f"\rFirmware Upload: [{'=' * curr_bar}>{'.' * rest_bar}] "
             f"{100 * current / total:3.1f}%"
         )
+
 
 class ESP32FirmwareMultiUpdater():
     def __init__(self):
@@ -521,7 +558,7 @@ class ESP32FirmwareMultiUpdater():
             if i > 9:
                 break
             try:
-                esp32_updater = ESP32FirmwareUpdater(modi_port.device)
+                esp32_updater = ESP32FirmwareUpdater(modi_port)
                 esp32_updater.set_print(False)
                 esp32_updater.set_raise_error(False)
             except Exception as e:
@@ -551,19 +588,16 @@ class ESP32FirmwareMultiUpdater():
             total_sequence = 0
 
             for index, esp32_updater in enumerate(self.esp32_updaters):
+                if esp32_updater.network_uuid is not None:
+                    self.network_uuid[index] = f'0x{esp32_updater.network_uuid:X}'
+                    if self.list_ui:
+                        self.list_ui.network_uuid_signal.emit(index, self.network_uuid[index])
+
                 if self.state[index] == 0:
                     # wait for network uuid
                     is_done = False
                     if esp32_updater.update_in_progress:
-                        if esp32_updater.network_uuid:
-                            self.network_uuid[index] = f'0x{esp32_updater.network_uuid:X}'
-                            self.state[index] = 1
-                            if self.list_ui:
-                                self.list_ui.network_uuid_signal.emit(index, self.network_uuid[index])
-                        else:
-                            self.state[index] = 2
-                            esp32_updater.update_error = -1
-                            esp32_updater.update_error_message = "Not response network uuid"
+                        self.state[index] = 1
                 elif self.state[index] == 1:
                     # update modules
                     if esp32_updater.update_error == 0:
@@ -626,7 +660,7 @@ class ESP32FirmwareMultiUpdater():
                     self.list_ui.total_progress_signal.emit(current_sequence / total_sequence * 100.0)
                     self.list_ui.total_status_signal.emit("Uploading...")
 
-                print(f"\r{self.__progress_bar(current_sequence, total_sequence)}", end="")
+                print(f"{self.__progress_bar(current_sequence, total_sequence)}", end="")
 
             if is_done:
                 break
@@ -641,13 +675,13 @@ class ESP32FirmwareMultiUpdater():
 
         if update_interpreter:
             if self.ui:
-                self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_stm32_modules.setEnabled(True)
-                self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_stm32.setEnabled(True)
-                self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_stm32_bootloader.setEnabled(True)
-                self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_esp32.setEnabled(True)
                 if self.ui.is_english:
                     self.ui.update_network_esp32_interpreter.setText("Update Network ESP32 Interpreter")
@@ -655,13 +689,13 @@ class ESP32FirmwareMultiUpdater():
                     self.ui.update_network_esp32_interpreter.setText("네트워크 모듈 인터프리터 초기화")
         else:
             if self.ui:
-                self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_stm32_modules.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_stm32_modules.setEnabled(True)
-                self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_stm32.setEnabled(True)
-                self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_stm32_bootloader.setEnabled(True)
-                self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px")
+                self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_esp32_interpreter.setEnabled(True)
                 if self.ui.is_english:
                     self.ui.update_network_esp32.setText("Update Network ESP32")
@@ -674,7 +708,4 @@ class ESP32FirmwareMultiUpdater():
     def __progress_bar(current: int, total: int) -> str:
         curr_bar = int(50 * current // total)
         rest_bar = int(50 - curr_bar)
-        return (
-            f"Firmware Upload: [{'=' * curr_bar}>{'.' * rest_bar}] "
-            f"{100 * current / total:3.1f}%"
-        )
+        return (f"\rFirmware Update: [{'=' * curr_bar}>{'.' * rest_bar}] {100 * current / total:3.1f}%")

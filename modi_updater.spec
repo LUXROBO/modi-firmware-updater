@@ -3,8 +3,6 @@
 import os
 import sys
 
-from platform import system
-
 cwd = os.getcwd()
 
 site_package_paths = [path for path in sys.path if path.endswith('site-packages')]
@@ -16,9 +14,9 @@ a = Analysis(
     ['main.py'],
     pathex=site_package_paths,
     binaries=[],
-    # Put data(i.e. assets) under virtual 'modi_firmware_updater/'
     datas=[
         ('modi_firmware_updater/assets', 'modi_firmware_updater/assets'),
+        ('modi_firmware_updater/core', 'modi_firmware_updater/core'),
     ],
     hiddenimports=[
         "modi_firmware_updater.util.connection_util",
@@ -31,9 +29,11 @@ a = Analysis(
     cipher=block_cipher,
     noarchive=False
 )
+
 pyz = PYZ(
     a.pure, a.zipped_data, cipher=block_cipher
 )
+
 exe = EXE(
     pyz,
     a.scripts,
@@ -41,7 +41,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='modi_updater',
+    name='MODI Firmware Updater',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -51,34 +51,10 @@ exe = EXE(
     console=False,
     icon='network_module.ico',
 )
+
 app = BUNDLE(
     exe,
-    name='modi_updater.app',
+    name='MODI Firmware Updater.app',
     icon='network_module.ico',
     bundle_identifier=None,
 )
-
-if system == 'Darwin':
-    import plistlib
-    from pathlib import Path
-
-    app_path = Path(app.name)
-
-    # read Info.plist
-    with open(app_path / 'Contents/Info.plist', 'rb') as f:
-        pl = plistlib.load(f)
-
-    # write Info.plist
-    with open(app_path / 'Contents/Info.plist', 'wb') as f:
-        pl['CFBundleExecutable'] = 'wrapper'
-        plistlib.dump(pl, f)
-
-    # write new wrapper script
-    shell_script = """#!/bin/bash
-    dir=$(dirname $0)
-    open -a Terminal file://${dir}/%s""" % app.appname
-    with open(app_path / 'Contents/MacOS/wrapper', 'w') as f:
-        f.write(shell_script)
-
-    # make it executable
-    (app_path  / 'Contents/MacOS/wrapper').chmod(0o755)
