@@ -412,11 +412,11 @@ class Form(QDialog):
             target=self.__click_motion, args=(6, button_start), daemon=True
         ).start()
         button_en = [
-            "Update Network ESP32",
-            "Update Network ESP32 Interpreter",
-            "Update STM32 Modules",
-            "Update Network STM32",
-            "Set Network Bootloader STM32",
+            "Update network module",
+            "Reset network module interpreter",
+            "Reset input && output module",
+            "Reset network module",
+            "Setup network bootloader",
             "Dev Mode",
             "한국어",
         ]

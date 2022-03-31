@@ -378,14 +378,14 @@ class NetworkFirmwareUpdater(ModiSerialPort):
                         self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                         self.ui.update_network_stm32.setEnabled(True)
                         if self.ui.is_english:
-                            self.ui.update_network_stm32_bootloader.setText("Set Network Bootloader STM32")
+                            self.ui.update_network_stm32_bootloader.setText("Setup network bootloader")
                         else:
                             self.ui.update_network_stm32_bootloader.setText("네트워크 모듈 부트로더")
                     else:
                         self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                         self.ui.update_network_stm32_bootloader.setEnabled(True)
                         if self.ui.is_english:
-                            self.ui.update_network_stm32.setText("Update Network STM32")
+                            self.ui.update_network_stm32.setText("Reset network module")
                         else:
                             self.ui.update_network_stm32.setText("네트워크 모듈 초기화")
 
@@ -416,14 +416,14 @@ class NetworkFirmwareUpdater(ModiSerialPort):
                 self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_stm32.setEnabled(True)
                 if self.ui.is_english:
-                    self.ui.update_network_stm32_bootloader.setText("Set Network Bootloader STM32")
+                    self.ui.update_network_stm32_bootloader.setText("Setup network bootloader")
                 else:
                     self.ui.update_network_stm32_bootloader.setText("네트워크 모듈 부트로더")
             else:
                 self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_stm32_bootloader.setEnabled(True)
                 if self.ui.is_english:
-                    self.ui.update_network_stm32.setText("Update Network STM32")
+                    self.ui.update_network_stm32.setText("Reset network module")
                 else:
                     self.ui.update_network_stm32.setText("네트워크 모듈 초기화")
 
@@ -586,14 +586,14 @@ class NetworkFirmwareUpdater(ModiSerialPort):
                 self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_stm32.setEnabled(True)
                 if self.ui.is_english:
-                    self.ui.update_network_stm32_bootloader.setText("Set Network Bootloader STM32")
+                    self.ui.update_network_stm32_bootloader.setText("Setup network bootloader")
                 else:
                     self.ui.update_network_stm32_bootloader.setText("네트워크 모듈 부트로더")
             else:
                 self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_stm32_bootloader.setEnabled(True)
                 if self.ui.is_english:
-                    self.ui.update_network_stm32.setText("Update Network STM32")
+                    self.ui.update_network_stm32.setText("Reset network module")
                 else:
                     self.ui.update_network_stm32.setText("네트워크 모듈 초기화")
 
@@ -798,14 +798,14 @@ class NetworkFirmwareMultiUpdater():
                 self.ui.update_network_stm32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_stm32.setEnabled(True)
                 if self.ui.is_english:
-                    self.ui.update_network_stm32_bootloader.setText("Set Network Bootloader STM32")
+                    self.ui.update_network_stm32_bootloader.setText("Setup network bootloader")
                 else:
                     self.ui.update_network_stm32_bootloader.setText("네트워크 모듈 부트로더")
             else:
                 self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_stm32_bootloader.setEnabled(True)
                 if self.ui.is_english:
-                    self.ui.update_network_stm32.setText("Update Network STM32")
+                    self.ui.update_network_stm32.setText("Reset network module")
                 else:
                     self.ui.update_network_stm32.setText("네트워크 모듈 초기화")
 

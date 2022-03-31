@@ -145,7 +145,7 @@ class STM32FirmwareUpdater(ModiSerialPort):
             self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
             self.ui.update_network_esp32_interpreter.setEnabled(True)
             if self.ui.is_english:
-                self.ui.update_stm32_modules.setText("Update STM32 Modules.")
+                self.ui.update_stm32_modules.setText("Reset input && output module")
             else:
                 self.ui.update_stm32_modules.setText("모듈 초기화")
 
@@ -887,7 +887,7 @@ class STM32FirmwareMultiUpdater():
             self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
             self.ui.update_network_esp32_interpreter.setEnabled(True)
             if self.ui.is_english:
-                self.ui.update_stm32_modules.setText("Update STM32 Modules.")
+                self.ui.update_stm32_modules.setText("Reset input && output module")
             else:
                 self.ui.update_stm32_modules.setText("모듈 초기화")
 

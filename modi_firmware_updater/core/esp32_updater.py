@@ -158,7 +158,7 @@ class ESP32FirmwareUpdater(ModiSerialPort):
                 self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_stm32_bootloader.setEnabled(True)
                 if self.ui.is_english:
-                    self.ui.update_network_esp32_interpreter.setText("Update Network ESP32 Interpreter")
+                    self.ui.update_network_esp32_interpreter.setText("Reset network module interpreter")
                 else:
                     self.ui.update_network_esp32_interpreter.setText("네트워크 모듈 인터프리터 초기화")
         else:
@@ -220,7 +220,7 @@ class ESP32FirmwareUpdater(ModiSerialPort):
                 self.ui.update_network_stm32_bootloader.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_stm32_bootloader.setEnabled(True)
                 if self.ui.is_english:
-                    self.ui.update_network_esp32.setText("Update Network ESP32")
+                    self.ui.update_network_esp32.setText("Update network module")
                 else:
                     self.ui.update_network_esp32.setText("네트워크 모듈 업데이트")
 
@@ -684,7 +684,7 @@ class ESP32FirmwareMultiUpdater():
                 self.ui.update_network_esp32.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_esp32.setEnabled(True)
                 if self.ui.is_english:
-                    self.ui.update_network_esp32_interpreter.setText("Update Network ESP32 Interpreter")
+                    self.ui.update_network_esp32_interpreter.setText("Reset network module interpreter")
                 else:
                     self.ui.update_network_esp32_interpreter.setText("네트워크 모듈 인터프리터 초기화")
         else:
@@ -698,7 +698,7 @@ class ESP32FirmwareMultiUpdater():
                 self.ui.update_network_esp32_interpreter.setStyleSheet(f"border-image: url({self.ui.active_path}); font-size: 16px; color: black;")
                 self.ui.update_network_esp32_interpreter.setEnabled(True)
                 if self.ui.is_english:
-                    self.ui.update_network_esp32.setText("Update Network ESP32")
+                    self.ui.update_network_esp32.setText("Update network module")
                 else:
                     self.ui.update_network_esp32.setText("네트워크 모듈 업데이트")
 
